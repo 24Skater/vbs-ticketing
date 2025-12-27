@@ -80,6 +80,13 @@ router.get(
   ticketController.getTicket
 );
 
+// Download ticket as PDF
+router.get(
+  '/:ticketId/pdf',
+  optionalAuth,
+  ticketController.downloadPDF
+);
+
 // Verify/check-in ticket
 router.post(
   '/:ticketId/verify',

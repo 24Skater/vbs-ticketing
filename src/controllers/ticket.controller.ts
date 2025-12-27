@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as ticketService from '../services/ticket.service.js';
+import { generateTicketPDF } from '../services/pdf.service.js';
 import { asyncHandler, Errors } from '../middleware/errorHandler.middleware.js';
 import type { CreateTicketInput, SearchTicketsInput } from '../validators/ticket.validator.js';
 
@@ -213,4 +214,26 @@ export const getStats = asyncHandler(async (_req: Request, res: Response) => {
     success: true,
     data: stats,
   });
+});
+
+/**
+ * Download ticket as PDF
+ * GET /api/tickets/:ticketId/pdf
+ */
+export const downloadPDF = asyncHandler(async (req: Request, res: Response) => {
+  const { ticketId } = req.params;
+  
+  const ticket = await ticketService.getTicketById(ticketId);
+  
+  if (!ticket) {
+    throw Errors.notFound('Ticket');
+  }
+
+  const pdfBuffer = await generateTicketPDF(ticket);
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="ticket-${ticket.ticketId}.pdf"`);
+  res.setHeader('Content-Length', pdfBuffer.length);
+  
+  res.send(pdfBuffer);
 });
