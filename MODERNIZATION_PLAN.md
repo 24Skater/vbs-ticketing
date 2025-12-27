@@ -14,13 +14,21 @@ This document serves as:
 
 ### Critical Rules (MUST FOLLOW)
 
-1. **NEVER skip a step** - Complete each checkbox before moving to the next
-2. **NEVER proceed without validation** - Each step has acceptance criteria that MUST pass
-3. **ALWAYS create backups** - Before any destructive operation
-4. **ALWAYS run tests** - After each implementation step
-5. **ALWAYS update this document** - Mark checkboxes as completed
-6. **STOP and ASK** if unclear about any step
-7. **ROLLBACK immediately** if any step fails validation
+1. **NEVER commit to main branch** - All work MUST be on `modernization-v2` branch
+2. **NEVER skip a step** - Complete each checkbox before moving to the next
+3. **NEVER proceed without validation** - Each step has acceptance criteria that MUST pass
+4. **ALWAYS create backups** - Before any destructive operation
+5. **ALWAYS run tests** - After each implementation step
+6. **ALWAYS update this document** - Mark checkboxes as completed
+7. **STOP and ASK** if unclear about any step
+8. **ROLLBACK immediately** if any step fails validation
+
+### Branch Strategy
+```
+main (PROTECTED - DO NOT TOUCH)
+  └── modernization-v2 (ALL WORK HERE)
+```
+User will manually merge to main when ready.
 
 ### Execution Order
 

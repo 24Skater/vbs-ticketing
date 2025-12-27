@@ -27,14 +27,20 @@
 ## ⚠️ AI AGENT RULES
 
 ```
-1. NEVER skip steps
-2. ALWAYS validate before proceeding
-3. CREATE backups before destructive operations
-4. RUN tests after each step
-5. UPDATE this checklist as you complete items
-6. STOP and ASK if unclear
-7. ROLLBACK if validation fails
+1. NEVER commit to main branch - ALL work on modernization-v2 branch
+2. NEVER skip steps
+3. ALWAYS validate before proceeding
+4. CREATE backups before destructive operations
+5. RUN tests after each step
+6. UPDATE this checklist as you complete items
+7. STOP and ASK if unclear
+8. ROLLBACK if validation fails
 ```
+
+### Branch Protection
+- **Working Branch:** `modernization-v2`
+- **Protected Branch:** `main` (DO NOT TOUCH)
+- **Merge Strategy:** User will merge manually when ready
 
 ---
 
