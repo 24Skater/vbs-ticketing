@@ -13,3 +13,6 @@ export * from './security.middleware.js';
 // Error handling middleware
 export * from './errorHandler.middleware.js';
 
+// Configuration middleware
+export * from './config.middleware.js';
+

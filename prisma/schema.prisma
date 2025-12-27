@@ -121,12 +121,12 @@ model Ticket {
 
 /// Payment transactions
 model Payment {
-  id              String          @id @default(cuid())
+  id              String              @id @default(cuid())
   ticketId        String
   amount          Int
-  currency        String          @default("GHS")
-  status          PaymentStatus   @default(PENDING)
-  provider        PaymentProvider @default(HUBTEL)
+  currency        String              @default("USD")
+  status          PaymentStatus       @default(PENDING)
+  provider        PaymentProviderType @default(MANUAL)
   reference       String?         @unique
   externalId      String?
   channel         String?
@@ -193,8 +193,155 @@ enum PaymentStatus {
 }
 
 /// Payment provider enumeration
-enum PaymentProvider {
+enum PaymentProviderType {
   HUBTEL
+  STRIPE
+  PAYPAL
+  SQUARE
+  PAYSTACK
+  FLUTTERWAVE
   MANUAL
   COMPLIMENTARY
+}
+
+// ============================================================================
+// SITE CONFIGURATION
+// ============================================================================
+
+/// Site-wide configuration (singleton)
+model SiteConfig {
+  id          String   @id @default("default")
+  
+  // Organization Info
+  orgName        String   @default("My Organization")
+  orgSlug        String   @unique @default("my-org")
+  orgDescription String?
+  orgWebsite     String?
+  orgEmail       String?
+  orgPhone       String?
+  orgAddress     String?
+  
+  // Localization
+  timezone       String   @default("UTC")
+  locale         String   @default("en-US")
+  language       String   @default("en")
+  currency       String   @default("USD")
+  currencySymbol String   @default("$")
+  dateFormat     String   @default("MM/DD/YYYY")
+  timeFormat     String   @default("12h") // "12h" or "24h"
+  
+  // Branding - Colors
+  primaryColor     String   @default("#3b82f6")
+  secondaryColor   String   @default("#1e293b")
+  accentColor      String   @default("#10b981")
+  backgroundColor  String   @default("#0f172a")
+  surfaceColor     String   @default("#1e293b")
+  textColor        String   @default("#f8fafc")
+  textMutedColor   String   @default("#94a3b8")
+  
+  // Branding - Typography
+  headingFont    String   @default("Inter")
+  bodyFont       String   @default("Inter")
+  borderRadius   String   @default("md") // none, sm, md, lg, full
+  
+  // Branding - Assets (URLs)
+  logoUrl        String?
+  logoDarkUrl    String?
+  faviconUrl     String?
+  heroImageUrl   String?
+  
+  // Content
+  homePageTitle    String   @default("Welcome")
+  homePageSubtitle String?
+  footerText       String   @default("Powered by VBS Ticketing")
+  
+  // Feature Flags
+  enablePayments           Boolean @default(true)
+  enableQrCodes            Boolean @default(true)
+  enablePdfTickets         Boolean @default(true)
+  enableEmailNotifications Boolean @default(false)
+  enableSmsNotifications   Boolean @default(false)
+  enablePublicEventList    Boolean @default(true)
+  enableTicketLookup       Boolean @default(true)
+  maintenanceMode          Boolean @default(false)
+  
+  // SEO & Meta
+  metaTitle       String?
+  metaDescription String?
+  metaKeywords    String?
+  socialImageUrl  String?
+  
+  // Custom Code (use with caution)
+  customCss       String?
+  customHeadHtml  String?
+  
+  // Timestamps
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@map("site_config")
+}
+
+/// Configured payment providers
+model PaymentProviderConfig {
+  id          String  @id @default(cuid())
+  
+  // Provider Identity
+  provider      PaymentProviderType
+  displayName   String
+  enabled       Boolean @default(false)
+  isDefault     Boolean @default(false)
+  sortOrder     Int     @default(0)
+  
+  // Encrypted Configuration (API keys, secrets)
+  config        Json    @default("{}")
+  
+  // Supported Features
+  supportsCreditCard   Boolean @default(false)
+  supportsDebitCard    Boolean @default(false)
+  supportsMobileMoney  Boolean @default(false)
+  supportsBankTransfer Boolean @default(false)
+  supportsWallet       Boolean @default(false)
+  
+  // Geographic Restrictions
+  currencies     String[] @default([])  // ["USD", "EUR", "GHS"]
+  countries      String[] @default([])  // ["US", "GB", "GH"]
+  
+  // Fees (optional, for display)
+  feePercent     Float?   // e.g., 2.9
+  feeFixed       Int?     // in smallest currency unit, e.g., 30 cents
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([provider])
+  @@index([enabled])
+  @@map("payment_provider_configs")
+}
+
+/// Media/File uploads
+model Upload {
+  id          String   @id @default(cuid())
+  
+  filename    String   // Original filename
+  key         String   @unique // Storage key/path
+  url         String   // Public URL
+  mimeType    String
+  size        Int      // Bytes
+  
+  // Categorization
+  category    String?  // "logo", "hero", "event", etc.
+  
+  // Metadata
+  width       Int?     // For images
+  height      Int?
+  altText     String?
+  
+  uploadedBy  String?  // User ID
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([category])
+  @@map("uploads")
 }

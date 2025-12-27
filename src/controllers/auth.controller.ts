@@ -198,6 +198,7 @@ export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
 /**
  * Request password reset
  * POST /api/auth/forgot-password
+ * Note: Email-based password reset not yet implemented
  */
 export const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
   const { email } = req.body;
@@ -206,7 +207,9 @@ export const forgotPassword = asyncHandler(async (req: Request, res: Response) =
     throw Errors.badRequest('Email is required');
   }
 
-  await authService.generatePasswordResetToken(email);
+  // TODO: Implement email-based password reset when email service is configured
+  // For now, just log the request
+  console.log('Password reset requested for:', email);
 
   // Always return success to prevent email enumeration
   res.json({

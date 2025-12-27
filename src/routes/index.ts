@@ -5,6 +5,7 @@ import eventRoutes from './event.routes.js';
 import analyticsRoutes from './analytics.routes.js';
 import paymentRoutes from './payment.routes.js';
 import webhookRoutes from './webhook.routes.js';
+import configRoutes from './config.routes.js';
 
 const router = Router();
 
@@ -15,6 +16,7 @@ router.use('/events', eventRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/webhooks', webhookRoutes);
+router.use('/config', configRoutes);
 
 // Health check
 router.get('/health', (_req, res) => {

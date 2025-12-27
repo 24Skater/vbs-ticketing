@@ -14,6 +14,141 @@ const prisma = new PrismaClient();
 async function seed() {
   console.log('🌱 Seeding database...\n');
 
+  // =========================================================================
+  // SITE CONFIGURATION
+  // =========================================================================
+  
+  const siteConfig = await prisma.siteConfig.upsert({
+    where: { id: 'default' },
+    update: {},
+    create: {
+      id: 'default',
+      // Organization
+      orgName: 'My Organization',
+      orgSlug: 'my-org',
+      orgDescription: 'Event ticketing platform',
+      orgEmail: 'info@example.com',
+      
+      // Localization (defaults - can be changed in admin)
+      timezone: 'UTC',
+      locale: 'en-US',
+      language: 'en',
+      currency: 'USD',
+      currencySymbol: '$',
+      dateFormat: 'MM/DD/YYYY',
+      timeFormat: '12h',
+      
+      // Branding - modern dark theme
+      primaryColor: '#3b82f6',
+      secondaryColor: '#1e293b',
+      accentColor: '#10b981',
+      backgroundColor: '#0f172a',
+      surfaceColor: '#1e293b',
+      textColor: '#f8fafc',
+      textMutedColor: '#94a3b8',
+      headingFont: 'Inter',
+      bodyFont: 'Inter',
+      borderRadius: 'md',
+      
+      // Content
+      homePageTitle: 'Welcome',
+      homePageSubtitle: 'Get your tickets for upcoming events',
+      footerText: 'Powered by VBS Ticketing',
+      
+      // Features
+      enablePayments: true,
+      enableQrCodes: true,
+      enablePdfTickets: true,
+      enablePublicEventList: true,
+      enableTicketLookup: true,
+      maintenanceMode: false,
+    },
+  });
+  console.log('✅ Created site configuration:', siteConfig.orgName);
+
+  // =========================================================================
+  // PAYMENT PROVIDERS
+  // =========================================================================
+
+  // Manual/Cash provider (always available)
+  await prisma.paymentProviderConfig.upsert({
+    where: { provider: 'MANUAL' },
+    update: {},
+    create: {
+      provider: 'MANUAL',
+      displayName: 'Manual / Cash / Bank Transfer',
+      enabled: true,
+      isDefault: true,
+      sortOrder: 0,
+      supportsBankTransfer: true,
+      currencies: ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'GHS'],
+      countries: [],
+    },
+  });
+  console.log('✅ Created payment provider: Manual');
+
+  // Stripe (disabled by default)
+  await prisma.paymentProviderConfig.upsert({
+    where: { provider: 'STRIPE' },
+    update: {},
+    create: {
+      provider: 'STRIPE',
+      displayName: 'Credit/Debit Card (Stripe)',
+      enabled: false,
+      isDefault: false,
+      sortOrder: 1,
+      supportsCreditCard: true,
+      supportsDebitCard: true,
+      currencies: ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY'],
+      countries: ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'JP'],
+      feePercent: 2.9,
+      feeFixed: 30,
+      config: {},
+    },
+  });
+  console.log('✅ Created payment provider: Stripe (disabled)');
+
+  // PayPal (disabled by default)
+  await prisma.paymentProviderConfig.upsert({
+    where: { provider: 'PAYPAL' },
+    update: {},
+    create: {
+      provider: 'PAYPAL',
+      displayName: 'PayPal',
+      enabled: false,
+      isDefault: false,
+      sortOrder: 2,
+      supportsWallet: true,
+      currencies: ['USD', 'EUR', 'GBP', 'CAD', 'AUD'],
+      countries: [],
+      feePercent: 3.49,
+      feeFixed: 49,
+      config: {},
+    },
+  });
+  console.log('✅ Created payment provider: PayPal (disabled)');
+
+  // Hubtel for Ghana (disabled by default)
+  await prisma.paymentProviderConfig.upsert({
+    where: { provider: 'HUBTEL' },
+    update: {},
+    create: {
+      provider: 'HUBTEL',
+      displayName: 'Mobile Money (Ghana)',
+      enabled: false,
+      isDefault: false,
+      sortOrder: 3,
+      supportsMobileMoney: true,
+      currencies: ['GHS'],
+      countries: ['GH'],
+      feePercent: 1.75,
+      config: {},
+    },
+  });
+  console.log('✅ Created payment provider: Hubtel (disabled)');
+
+  console.log('');  // Empty line
+
   // Create default admin user
   const adminPassword = await bcrypt.hash('Admin123!', 12);
   

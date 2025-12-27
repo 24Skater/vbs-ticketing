@@ -156,7 +156,8 @@ export async function refreshAccessToken(
   refreshToken: string
 ): Promise<ServiceResult<{ accessToken: string; expiresIn: number }>> {
   try {
-    const decoded = verifyRefreshToken(refreshToken);
+    // Verify token is valid (throws if invalid)
+    verifyRefreshToken(refreshToken);
     
     // Verify session exists
     const session = await prisma.session.findUnique({
