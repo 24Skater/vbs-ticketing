@@ -10,27 +10,46 @@ const GHANA_PHONE_PATTERNS = {
 };
 
 /**
+ * Check if phone is valid Ghana number
+ */
+function isGhanaPhone(digits: string): boolean {
+  return (
+    GHANA_PHONE_PATTERNS.international.test(digits) ||
+    GHANA_PHONE_PATTERNS.local.test(digits) ||
+    GHANA_PHONE_PATTERNS.short.test(digits)
+  );
+}
+
+/**
+ * Normalize Ghana phone to 233 format
+ */
+function normalizeGhanaPhone(digits: string): string {
+  if (digits.startsWith('233') && digits.length === 12) return digits;
+  if (digits.startsWith('0') && digits.length === 10) return `233${digits.slice(1)}`;
+  if (digits.length === 9) return `233${digits}`;
+  return digits;
+}
+
+/**
  * Phone number schema with normalization
- * Accepts various formats and normalizes to 233XXXXXXXXX
+ * Accepts Ghana formats or any 10+ digit number
  */
 export const phoneSchema = z.string()
   .transform(val => val.replace(/[\s\-\(\)\.]/g, '')) // Remove formatting
   .transform(val => val.replace(/^\+/, ''))           // Remove leading +
   .refine(val => {
     const digits = val.replace(/\D/g, '');
-    return (
-      GHANA_PHONE_PATTERNS.international.test(digits) ||
-      GHANA_PHONE_PATTERNS.local.test(digits) ||
-      GHANA_PHONE_PATTERNS.short.test(digits)
-    );
+    return digits.length >= 9; // At least 9 digits
   }, {
-    message: 'Invalid Ghana phone number. Use format: 233XXXXXXXXX, 0XXXXXXXXX, or XXXXXXXXX',
+    message: 'Phone number must have at least 9 digits',
   })
   .transform(val => {
     const digits = val.replace(/\D/g, '');
-    if (digits.startsWith('233') && digits.length === 12) return digits;
-    if (digits.startsWith('0') && digits.length === 10) return `233${digits.slice(1)}`;
-    if (digits.length === 9) return `233${digits}`;
+    // If it's a Ghana number, normalize it
+    if (isGhanaPhone(digits)) {
+      return normalizeGhanaPhone(digits);
+    }
+    // Otherwise, keep as-is
     return digits;
   });
 
