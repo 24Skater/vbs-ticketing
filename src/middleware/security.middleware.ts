@@ -6,7 +6,7 @@ import { RequestHandler } from 'express';
  * Get allowed origins from environment
  */
 function getAllowedOrigins(): string[] {
-  const origins = process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5000';
+  const origins = process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5000,http://localhost:5001';
   return origins.split(',').map(origin => origin.trim());
 }
 
@@ -15,20 +15,8 @@ function getAllowedOrigins(): string[] {
  * Configures various HTTP headers for security
  */
 export const helmetMiddleware: RequestHandler = helmet({
-  // Content Security Policy
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for UI
-      scriptSrc: ["'self'", "'unsafe-inline'"], // Allow Vite module scripts
-      imgSrc: ["'self'", 'data:', 'blob:', 'https:'], // Allow data URIs for QR codes
-      connectSrc: ["'self'", 'https://api.hubtel.com', 'https://rmp.hubtel.com'],
-      fontSrc: ["'self'", 'https:', 'data:'],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-    },
-  },
+  // Disable CSP in development for Vite compatibility
+  contentSecurityPolicy: false,
   // Prevent clickjacking
   frameguard: { action: 'deny' },
   // Hide X-Powered-By header

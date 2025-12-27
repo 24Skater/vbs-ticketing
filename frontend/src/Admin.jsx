@@ -1,51 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
+import { authApi, ticketsApi, setAuthTokens, clearAuthTokens, isAuthenticated } from "./lib/api";
 import "./App.css";
 
-const API =
-	typeof window !== "undefined"
-		? import.meta.env.VITE_API_BASE?.replace(/\/$/, "") || window.location.origin
-		: "";
-const ADMIN_KEY_STORAGE = "vbs_admin_key";
-
-async function api(path, method = "GET", body, adminKey) {
-	const res = await fetch(`${API}${path}`, {
-		method,
-		headers: {
-			"Content-Type": "application/json",
-			"x-admin-key": adminKey || "",
-		},
-		body: body ? JSON.stringify(body) : undefined,
-	});
-	const text = await res.text();
-	let parsed;
-	try {
-		parsed = text ? JSON.parse(text) : undefined;
-	} catch {
-		parsed = undefined;
-	}
-	if (!res.ok) {
-		let message = parsed?.error || parsed?.message || text || "Request failed";
-		const error = new Error(message);
-		error.status = res.status;
-		error.payload = parsed;
-		throw error;
-	}
-	return parsed;
-}
+const TOKEN_STORAGE = "accessToken";
 
 export default function Admin() {
-	const [adminKey, setAdminKey] = useState(localStorage.getItem(ADMIN_KEY_STORAGE) || "");
-	const [keyInput, setKeyInput] = useState("");
+	const [authenticated, setAuthenticated] = useState(isAuthenticated());
+	const [email, setEmail] = useState("");
+	const [password, setPassword] = useState("");
+	const [loginError, setLoginError] = useState("");
+	const [loginLoading, setLoginLoading] = useState(false);
+	const [user, setUser] = useState(null);
+
 	const [tickets, setTickets] = useState([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
-	const [importFile, setImportFile] = useState(null);
-	const [importing, setImporting] = useState(false);
-	const [importResults, setImportResults] = useState(null);
 
 	const [name, setName] = useState("");
 	const [phone, setPhone] = useState("");
-	const [names, setNames] = useState("");
 	const [ticketType, setTicketType] = useState("Regular");
 	const [paymentStatus, setPaymentStatus] = useState("Paid");
 
@@ -53,640 +25,387 @@ export default function Admin() {
 	const [verifyCode, setVerifyCode] = useState("");
 	const [verifying, setVerifying] = useState(false);
 	const [verifyResult, setVerifyResult] = useState("");
-	const [lastAutoVerifiedCode, setLastAutoVerifiedCode] = useState("");
-	const [logs, setLogs] = useState([]);
-	const [resolveRef, setResolveRef] = useState("");
-	const [resolvePhone, setResolvePhone] = useState("");
-	const [resolveName, setResolveName] = useState("");
-	const [resolving, setResolving] = useState(false);
-	const [resolveResult, setResolveResult] = useState(null);
 
-	// QR scanning state
-	const [scanOpen, setScanOpen] = useState(false);
-	const [scanError, setScanError] = useState("");
-	const [streamRef, setStreamRef] = useState(null);
-	const [videoTrack, setVideoTrack] = useState(null);
-	const [torchOn, setTorchOn] = useState(false);
-	const videoId = "qr_video_el";
+	const [stats, setStats] = useState(null);
 
 	const amount = useMemo(() => {
-		if (ticketType === "VIP") return 500;
-		return 300;
+		if (ticketType === "VIP") return 50000; // 500 GHS in pesewas
+		return 30000; // 300 GHS in pesewas
 	}, [ticketType]);
 
-	useEffect(() => {
-		if (adminKey) {
-			localStorage.setItem(ADMIN_KEY_STORAGE, adminKey);
-			refresh();
-			if (activeTab === "verify") {
-				loadLogs();
-			}
-		}
-	}, [adminKey, activeTab]);
-
-	async function refresh() {
+	// Login handler
+	async function handleLogin(e) {
+		e.preventDefault();
+		setLoginLoading(true);
+		setLoginError("");
+		
 		try {
-			setLoading(true);
-			const data = await api("/api/admin/payments", "GET", undefined, adminKey);
-			setTickets(data?.data || []);
-			setError("");
-		} catch (e) {
-			if (e.status === 401) {
-				localStorage.removeItem(ADMIN_KEY_STORAGE);
-				setAdminKey("");
-				setError("Admin key required. Please sign in again.");
-			} else {
-				console.warn("Failed to load ticket list:", e);
-				setError(e.message || "Failed to load tickets.");
-			}
+			const response = await authApi.login(email, password);
+			setAuthTokens(response.data.accessToken, response.data.refreshToken);
+			setUser(response.data.user);
+			setAuthenticated(true);
+			refresh();
+		} catch (err) {
+			setLoginError(err.message || "Login failed");
+		} finally {
+			setLoginLoading(false);
+		}
+	}
+
+	// Logout handler
+	function handleLogout() {
+		clearAuthTokens();
+		setAuthenticated(false);
+		setUser(null);
+		setTickets([]);
+	}
+
+	// Check auth on mount
+	useEffect(() => {
+		if (authenticated) {
+			authApi.me().then(res => {
+				setUser(res.data);
+			}).catch(() => {
+				handleLogout();
+			});
+		}
+	}, []);
+
+	// Refresh tickets
+	async function refresh() {
+		setLoading(true);
+		setError("");
+		try {
+			const [ticketsRes, statsRes] = await Promise.all([
+				ticketsApi.list({ limit: 100 }),
+				ticketsApi.getStats()
+			]);
+			setTickets(ticketsRes.data || []);
+			setStats(statsRes.data);
+		} catch (err) {
+			setError(err.message || "Failed to load tickets");
 		} finally {
 			setLoading(false);
 		}
 	}
 
-	async function handleResolveTxn(e) {
+	useEffect(() => {
+		if (authenticated) {
+			refresh();
+		}
+	}, [authenticated]);
+
+	// Create ticket
+	async function createTicket(e) {
 		e.preventDefault();
+		setLoading(true);
 		setError("");
-		setResolveResult(null);
-		if (!resolveRef || !resolvePhone) {
-			setError("Client reference and phone are required");
-			return;
-		}
 		try {
-			setResolving(true);
-			const body = {
-				clientReference: resolveRef.trim(),
-				phone: resolvePhone.trim(),
-				name: resolveName.trim() || undefined,
-			};
-			const res = await api("/api/admin/resolve-txn", "POST", body, adminKey);
-			setResolveResult(res || {});
-			await refresh();
-		} catch (e) {
-			if (e.status === 401) {
-				localStorage.removeItem(ADMIN_KEY_STORAGE);
-				setAdminKey("");
-				setError("Session expired. Please sign in again.");
-			} else {
-				setError(e.message || "Resolve failed");
-			}
+			await ticketsApi.create({
+				name,
+				phone,
+				ticketType: ticketType.toUpperCase(),
+				amount,
+				status: paymentStatus === "Paid" ? "PAID" : "PENDING"
+			});
+			setName("");
+			setPhone("");
+			refresh();
+		} catch (err) {
+			setError(err.message || "Failed to create ticket");
 		} finally {
-			setResolving(false);
+			setLoading(false);
 		}
 	}
 
-	async function loadLogs() {
-		try {
-			const data = await api("/api/admin/verify/logs", "GET", undefined, adminKey);
-			setLogs(data?.data || []);
-		} catch (e) {
-			console.warn("Failed to load logs:", e);
-		}
-	}
-
-	async function handleVerify(e) {
-		e?.preventDefault?.();
-		if (!verifyCode) return;
+	// Verify ticket
+	async function verifyTicket(code) {
+		if (!code) return;
 		setVerifying(true);
 		setVerifyResult("");
 		try {
-			const res = await api("/api/admin/verify", "POST", { ticketId: verifyCode }, adminKey);
-			setVerifyResult(res?.status === "verified" ? "Verified — Access Granted" : "Verification completed");
-			await loadLogs();
-			await refresh();
-		} catch (e) {
-			if (e.status === 401) {
-				localStorage.removeItem(ADMIN_KEY_STORAGE);
-				setAdminKey("");
-				setError("Session expired. Please sign in again.");
+			const res = await ticketsApi.verify(code.toUpperCase());
+			setVerifyResult(`✅ ${res.message || "Ticket verified!"} - ${res.data?.name || ""}`);
+			refresh();
+		} catch (err) {
+			if (err.message?.includes("already")) {
+				setVerifyResult(`⚠️ ${err.message}`);
 			} else {
-				setVerifyResult(e.message || "Invalid or Already Used");
+				setVerifyResult(`❌ ${err.message || "Verification failed"}`);
 			}
 		} finally {
 			setVerifying(false);
 		}
 	}
 
-	// Auto-verify when a full ticket code is present (e.g. from scan or paste),
-	// so the admin does not have to press the Verify button explicitly.
-	useEffect(() => {
-		if (!verifyCode || verifying) return;
-		const cleaned = verifyCode.trim().toUpperCase();
-		// Basic pattern: VBS- + at least 4 more alphanumeric chars
-		if (!/^VBS-[A-Z0-9]{4,}$/.test(cleaned)) return;
-		if (cleaned === lastAutoVerifiedCode) return;
-		setLastAutoVerifiedCode(cleaned);
-		// Fire verify without requiring button press
-		// eslint-disable-next-line no-floating-promises
-		handleVerify();
-	}, [verifyCode, verifying, lastAutoVerifiedCode]);
-
-	function extractTicketIdFromText(text) {
-		if (!text) return "";
+	// Delete ticket
+	async function deleteTicket(ticketId) {
+		if (!confirm("Are you sure you want to cancel this ticket?")) return;
 		try {
-			const url = new URL(text);
-			const parts = url.pathname.split("/").filter(Boolean);
-			const idx = parts.findIndex((p) => p.toLowerCase() === "tickets" || p.toLowerCase() === "ticket");
-			if (idx >= 0 && parts[idx + 1]) return decodeURIComponent(parts[idx + 1]);
-		} catch {}
-		const m = String(text).match(/VBS-[A-Z0-9]{6,}/i);
-		return m ? m[0].toUpperCase() : "";
-	}
-
-	async function startScan() {
-		setScanError("");
-		setScanOpen(true);
-		try {
-			const constraints = { video: { facingMode: { ideal: "environment" } } };
-			// Try native BarcodeDetector first
-			if ("BarcodeDetector" in window) {
-				const stream = await navigator.mediaDevices.getUserMedia(constraints);
-				setStreamRef(stream);
-				const track = stream.getVideoTracks()[0];
-				setVideoTrack(track || null);
-				const video = document.getElementById(videoId);
-				if (video) {
-					video.srcObject = stream;
-					video.play().catch(() => {});
-				}
-				const detector = new window.BarcodeDetector({ formats: ["qr_code", "qr", "code_128", "pdf417"] });
-				let cancelled = false;
-				async function loop() {
-					if (cancelled) return;
-					try {
-						const v = document.getElementById(videoId);
-						if (v && v.readyState >= 2) {
-							const codes = await detector.detect(v);
-							if (codes && codes.length) {
-								const raw = codes[0].rawValue || codes[0].raw || "";
-								const tid = extractTicketIdFromText(raw);
-								if (tid) {
-									setVerifyCode(tid);
-									await handleVerify();
-									cancelled = true;
-									stopScan();
-									return;
-								}
-							}
-						}
-					} catch (e) {
-						setScanError(e?.message || "Scan error");
-					}
-					if (!cancelled) requestAnimationFrame(loop);
-				}
-				requestAnimationFrame(loop);
-				return;
-			}
-
-			// Fallback to ZXing for Safari/iOS and other browsers
-			try {
-				const { BrowserMultiFormatReader } = await import("@zxing/browser");
-				const codeReader = new BrowserMultiFormatReader();
-				const video = document.getElementById(videoId);
-				if (!video) throw new Error("Video element not found");
-				await codeReader.decodeFromVideoDevice(undefined, video, (result, err, controls) => {
-					if (result?.getText) {
-						const raw = result.getText();
-						const tid = extractTicketIdFromText(raw);
-						if (tid) {
-							setVerifyCode(tid);
-							controls.stop();
-							stopScan();
-							// Fire verify after close so UI updates cleanly
-							setTimeout(() => handleVerify(), 0);
-						}
-					}
-					if (err && String(err).includes("NotFoundException")) {
-						// keep scanning silently
-					}
-				});
-			} catch (e) {
-				setScanError("QR scanning not supported on this device/browser. Please enter the code manually.");
-			}
-		} catch (e) {
-			setScanError(e?.message || "Unable to start camera");
+			await ticketsApi.delete(ticketId);
+			refresh();
+		} catch (err) {
+			setError(err.message || "Failed to cancel ticket");
 		}
 	}
 
-	function stopScan() {
-		try {
-			const video = document.getElementById(videoId);
-			if (video) video.srcObject = null;
-			if (streamRef) {
-				streamRef.getTracks().forEach((t) => t.stop());
-				setStreamRef(null);
-			}
-			if (videoTrack) {
-				try {
-					videoTrack.stop();
-				} catch {}
-				setVideoTrack(null);
-				setTorchOn(false);
-			}
-		} catch {}
-		setScanOpen(false);
-	}
-
-	async function toggleFlash() {
-		try {
-			if (!videoTrack || !videoTrack.getCapabilities) return;
-			const capabilities = videoTrack.getCapabilities();
-			if (!capabilities || !capabilities.torch) {
-				setScanError("Flashlight not supported on this device");
-				return;
-			}
-			const next = !torchOn;
-			await videoTrack.applyConstraints({ advanced: [{ torch: next }] });
-			setTorchOn(next);
-		} catch (e) {
-			setScanError(e?.message || "Unable to toggle flashlight");
-		}
-	}
-
-	async function handleLogin(e) {
-		e.preventDefault();
-		if (!keyInput) return;
-		setAdminKey(keyInput.trim());
-		setKeyInput("");
-	}
-
-	async function handleCreate(e) {
-		e.preventDefault();
-		setError("");
-		try {
-			// Process names - split by newline and filter out empty lines
-			const nameList = names
-				.split('\n')
-				.map(name => name.trim())
-				.filter(name => name.length > 0);
-
-			// Validate input
-			if (nameList.length === 0 || !phone) {
-				setError("Please enter at least one name and a phone number");
-				return;
-			}
-
-			if (nameList.length > 50) {
-				setError("Maximum 50 tickets at once");
-				return;
-			}
-
-			setLoading(true);
-
-			// Create an array of ticket creation promises
-			const createPromises = nameList.map(name => 
-				api(
-					"/api/admin/create",
-					"POST",
-					{ name, phone, amount, status: paymentStatus, ticketType },
-					adminKey
-				)
-			);
-
-			// Wait for all tickets to be created
-			const results = await Promise.all(createPromises);
-
-			// Reset form and show success message
-			setNames("");
-			setPhone("");
-			await refresh();
-			alert(`Successfully created ${results.length} ticket${results.length !== 1 ? 's' : ''}!`);
-		} catch (e) {
-			if (e.status === 401) {
-				localStorage.removeItem(ADMIN_KEY_STORAGE);
-				setAdminKey("");
-				setError("Session expired. Please sign in again.");
-			} else {
-				setError(e.message || "Create failed");
-			}
-		} finally {
-			setLoading(false);
-		}
-	}
-
-	async function handleDelete(id) {
-		if (!confirm("Delete this ticket?")) return;
-		try {
-			await api(`/api/admin/payments/${id}`, "DELETE", undefined, adminKey);
-			await refresh();
-		} catch (e) {
-			if (e.status === 401) {
-				localStorage.removeItem(ADMIN_KEY_STORAGE);
-				setAdminKey("");
-				setError("Session expired. Please sign in again.");
-			} else {
-				alert(e.message || "Delete failed");
-			}
-		}
-	}
-
-	function handleLogout() {
-		localStorage.removeItem(ADMIN_KEY_STORAGE);
-		setAdminKey("");
-		setTickets([]);
-		setError("");
-	}
-
-	async function handleExportTemplate() {
-		try {
-			const res = await fetch(`${API}/api/admin/manual-template`, {
-				method: "GET",
-				headers: { "x-admin-key": adminKey || "" },
-			});
-			if (!res.ok) {
-				const text = await res.text();
-				throw new Error(text || "Export failed");
-			}
-			const blob = await res.blob();
-			const url = window.URL.createObjectURL(blob);
-			const a = document.createElement("a");
-			a.href = url;
-			a.download = "manual-ticket-template.xlsx";
-			document.body.appendChild(a);
-			a.click();
-			window.URL.revokeObjectURL(url);
-		} catch (e) {
-			alert(e.message || "Export failed");
-		}
-	}
-
-	async function handleImport(e) {
-		e.preventDefault();
-		if (!importFile) return;
-		setImporting(true);
-		setImportResults(null);
-		try {
-			const fd = new FormData();
-			fd.append("file", importFile);
-			const res = await fetch(`${API}/api/admin/manual-import`, {
-				method: "POST",
-				headers: { "x-admin-key": adminKey || "" },
-				body: fd,
-			});
-			const json = await res.json().catch(() => undefined);
-			if (!res.ok) {
-				throw new Error(json?.error || "Import failed");
-			}
-			setImportResults(json);
-			await refresh();
-		} catch (e) {
-			setError(e.message || "Import failed");
-		} finally {
-			setImporting(false);
-		}
-	}
-
-	return (
-		<div className="app" style={{ background: "#0b1220", color: "#e2e8f0" }}>
-			<div className="hero" style={{ minHeight: "100vh", background: "none" }}>
-				<div className="hero-content" style={{ color: "#e2e8f0" }}>
-					<h1 className="title">Admin Panel</h1>
-					<p className="subtitle">Manage tickets privately</p>
-					{error ? <small style={{ color: "#fecaca" }}>{error}</small> : null}
-
-					{!adminKey ? (
-						<div className="form-wrapper" style={{ maxWidth: 420 }}>
-							<form className="ticket-form" onSubmit={handleLogin}>
-								<input
-									type="password"
-									placeholder="Enter admin key"
-									value={keyInput}
-									onChange={(e) => setKeyInput(e.target.value)}
-								/>
-								<button type="submit">Sign In</button>
-							</form>
-						</div>
-					) : (
-						<>
-							<button className="sign-out-button" type="button" onClick={handleLogout}>
-								Sign out
-							</button>
-							<div style={{ display: "flex", gap: 8, margin: "12px 0", flexWrap: "wrap" }}>
-								<button onClick={() => setActiveTab("manage")}>Manage</button>
-								<button onClick={() => setActiveTab("verify")}>Verify Ticket</button>
-							</div>
-
-							{activeTab === "verify" ? (
-								<div className="form-wrapper" style={{ maxWidth: 520 }}>
-									<h3 style={{ marginTop: 0 }}>Verify Ticket</h3>
-									<form className="ticket-form" onSubmit={handleVerify}>
-										<input
-											type="text"
-											placeholder="Enter Ticket Code (e.g. VBS-XXXXXX)"
-											value={verifyCode}
-											onChange={(e) => setVerifyCode(e.target.value)}
-											required
-										/>
-										<button type="submit" disabled={verifying}>{verifying ? "Verifying..." : "Verify"}</button>
-										<button type="button" onClick={startScan} disabled={verifying}>Scan QR</button>
-										{verifyResult ? (
-											<p style={{ marginTop: 8, color: verifyResult.includes("Verified") ? "#a7f3d0" : "#fecaca" }}>
-												{verifyResult}
-											</p>
-										) : null}
-									</form>
-									{scanOpen ? (
-										<div className="qr-scanner-overlay">
-											<video id={videoId} className="qr-scanner-video" playsInline muted />
-											<div className="scanner-frame" />
-											<div className="scan-hint">Find a code to scan</div>
-											<button
-												id="flash-btn"
-												type="button"
-												className={`flash-btn${torchOn ? " flash-btn--active" : ""}`}
-												onClick={toggleFlash}
-											>
-												🔦
-											</button>
-											<button type="button" className="scanner-close-btn" onClick={stopScan}>
-												Close
-											</button>
-											{scanError ? <p style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", color: "#fecaca", background: "rgba(0,0,0,0.6)", padding: "6px 10px", borderRadius: 999, fontSize: 12, zIndex: 20 }}>{scanError}</p> : null}
-										</div>
-									) : null}
-									<div style={{ marginTop: 16 }}>
-										<h4 style={{ marginTop: 0 }}>Recent Verifications</h4>
-										<button type="button" onClick={loadLogs} style={{ marginBottom: 8 }}>Refresh Logs</button>
-										<div style={{ overflowX: "auto" }}>
-											<table style={{ width: "100%", borderCollapse: "collapse" }}>
-												<thead>
-													<tr style={{ textAlign: "left" }}>
-														<th style={{ padding: 8 }}>Ticket Code</th>
-														<th style={{ padding: 8 }}>Name</th>
-														<th style={{ padding: 8 }}>Phone</th>
-														<th style={{ padding: 8 }}>Verified At</th>
-														<th style={{ padding: 8 }}>Verified By</th>
-													</tr>
-												</thead>
-												<tbody>
-													{logs.map((l, i) => (
-														<tr key={i} style={{ borderTop: "1px solid rgba(255,255,255,0.15)" }}>
-															<td style={{ padding: 8, fontFamily: "monospace" }}>{l.ticketId}</td>
-															<td style={{ padding: 8 }}>{l.name}</td>
-															<td style={{ padding: 8 }}>{l.phone}</td>
-															<td style={{ padding: 8 }}>{l.verifiedAt ? new Date(l.verifiedAt).toLocaleString() : "—"}</td>
-															<td style={{ padding: 8 }}>{l.verifiedBy || "—"}</td>
-														</tr>
-													))}
-												</tbody>
-											</table>
-										</div>
-									</div>
-								</div>
-							) : null}
-							<div className="form-wrapper" style={{ maxWidth: 520 }}>
-								<h3 style={{ marginTop: 0 }}>Bulk Manual Tickets</h3>
-								<div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-									<button type="button" onClick={handleExportTemplate}>Export Manual Ticket Template</button>
-									<form onSubmit={handleImport} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-										<input type="file" accept=".xlsx,.xls" onChange={(e) => setImportFile(e.target.files?.[0] || null)} />
-										<button type="submit" disabled={importing || !importFile}>{importing ? "Importing..." : "Import Filled Template"}</button>
-									</form>
-								</div>
-								{importResults ? (
-									<div style={{ marginTop: 12 }}>
-										<h4 style={{ marginTop: 0 }}>Import Summary</h4>
-										<div style={{ overflowX: "auto" }}>
-											<table style={{ width: "100%", borderCollapse: "collapse" }}>
-												<thead>
-													<tr style={{ textAlign: "left" }}>
-														<th style={{ padding: 8 }}>Row</th>
-														<th style={{ padding: 8 }}>Status</th>
-														<th style={{ padding: 8 }}>Ticket Code</th>
-														<th style={{ padding: 8 }}>Error</th>
-													</tr>
-												</thead>
-												<tbody>
-													{(importResults?.results || []).map((r, idx) => (
-														<tr key={idx} style={{ borderTop: "1px solid rgba(255,255,255,0.15)" }}>
-															<td style={{ padding: 8 }}>{r.row}</td>
-															<td style={{ padding: 8 }}>{r.success ? "Success" : "Failed"}</td>
-															<td style={{ padding: 8, fontFamily: "monospace" }}>{r.ticketId || "—"}</td>
-															<td style={{ padding: 8, color: r.success ? "#a7f3d0" : "#fecaca" }}>{r.error || ""}</td>
-														</tr>
-													))}
-												</tbody>
-											</table>
-										</div>
-									</div>
-								) : null}
-							</div>
-							<div className="form-wrapper" style={{ maxWidth: 520 }}>
-								<h3 style={{ marginTop: 0 }}>Resolve Transaction (Status Check)</h3>
-								<form className="ticket-form" onSubmit={handleResolveTxn}>
-									<input
-										type="text"
-										placeholder="Client Reference from Hubtel"
-										value={resolveRef}
-										onChange={(e) => setResolveRef(e.target.value)}
-										required
-									/>
-									<input
-										type="text"
-										placeholder="Customer Phone (e.g. 233549111198)"
-										value={resolvePhone}
-										onChange={(e) => setResolvePhone(e.target.value)}
-										required
-									/>
-									<input
-										type="text"
-										placeholder="Customer Name (optional)"
-										value={resolveName}
-										onChange={(e) => setResolveName(e.target.value)}
-									/>
-									<button type="submit" disabled={resolving}>{resolving ? "Resolving..." : "Resolve & Issue Tickets"}</button>
-									{resolveResult ? (
-										<small style={{ color: "#e2e8f0" }}>
-											Status: {resolveResult.status || "Unknown"}; Resolved: {String(resolveResult.resolved)}; Created: {resolveResult.created || 0}
-										</small>
-									) : null}
-								</form>
-							</div>
-							<div className="form-wrapper" style={{ maxWidth: 520 }}>
-								<h3 style={{ marginTop: 0 }}>Create Manual Ticket</h3>
-								<form className="ticket-form" onSubmit={handleCreate}>
-									<textarea
-										placeholder="Enter names, one per line"
-										value={names}
-										onChange={(e) => setNames(e.target.value)}
-										style={{ minHeight: '100px', padding: '8px', borderRadius: '4px', border: '1px solid #4a5568', width: '100%' }}
-										required
-									/>
-									<input
-										type="text"
-										placeholder="Phone Number (shared for all tickets)"
-										value={phone}
-										onChange={(e) => setPhone(e.target.value)}
-										required
-									/>
-									<select value={ticketType} onChange={(e) => setTicketType(e.target.value)}>
-										<option>Regular</option>
-										<option>VIP</option>
-									</select>
-									<select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}>
-										<option>Paid</option>
-										<option>Unpaid</option>
-									</select>
-									<input type="number" value={amount} readOnly />
-									<button type="submit" disabled={loading}>
-										{loading ? "Processing..." : "Generate Ticket"}
-									</button>
-									{error ? <small style={{ color: "#fecaca" }}>{error}</small> : null}
-								</form>
-							</div>
-
-							<div className="form-wrapper" style={{ width: "100%", maxWidth: 920 }}>
-								<h3 style={{ marginTop: 0 }}>All Tickets</h3>
-								<div style={{ overflowX: "auto" }}>
-									<table style={{ width: "100%", borderCollapse: "collapse" }}>
-										<thead>
-											<tr style={{ textAlign: "left" }}>
-												<th style={{ padding: 8 }}>Name</th>
-												<th style={{ padding: 8 }}>Phone</th>
-												<th style={{ padding: 8 }}>Ticket Type</th>
-												<th style={{ padding: 8 }}>Amount</th>
-												<th style={{ padding: 8 }}>Ticket Code</th>
-												<th style={{ padding: 8 }}>Secure Code</th>
-												<th style={{ padding: 8 }}>Status</th>
-												<th style={{ padding: 8 }}>Created</th>
-												<th style={{ padding: 8 }}></th>
-											</tr>
-										</thead>
-										<tbody>
-											{tickets.map((t) => (
-												<tr key={t._id} style={{ borderTop: "1px solid rgba(255,255,255,0.15)" }}>
-													<td style={{ padding: 8 }}>{t.name}</td>
-													<td style={{ padding: 8 }}>{t.phone}</td>
-													<td style={{ padding: 8 }}>{t.ticketType}</td>
-													<td style={{ padding: 8 }}>₵{t.amount}</td>
-													<td style={{ padding: 8, fontFamily: "monospace" }}>{t.ticketId}</td>
-													<td style={{ padding: 8, fontFamily: "monospace" }}>{t.accessCode || "—"}</td>
-													<td style={{ padding: 8 }}>{t.status}</td>
-													<td style={{ padding: 8 }}>{new Date(t.createdAt).toLocaleString()}</td>
-													<td style={{ padding: 8, display: "flex", gap: 8 }}>
-														<button
-															onClick={() => window.open(`/ticket/${encodeURIComponent(t.ticketId)}`, "_blank")}
-														>
-															View
-														</button>
-														<button
-															style={{ background: "#ef4444" }}
-															onClick={() => handleDelete(t._id)}
-														>
-															Delete
-														</button>
-													</td>
-												</tr>
-											))}
-										</tbody>
-									</table>
-								</div>
-							</div>
-						</>
-					)}
+	// Login Screen
+	if (!authenticated) {
+		return (
+			<div className="admin-bg">
+				<div className="admin-container" style={{ maxWidth: 400 }}>
+					<h1 className="admin-title">Admin Panel</h1>
+					<p className="admin-subtitle">Sign in to manage tickets</p>
+					
+					<form onSubmit={handleLogin} className="admin-form">
+						{loginError && (
+							<div className="admin-error">{loginError}</div>
+						)}
+						
+						<input
+							type="email"
+							placeholder="Email"
+							value={email}
+							onChange={(e) => setEmail(e.target.value)}
+							className="admin-input"
+							required
+						/>
+						
+						<input
+							type="password"
+							placeholder="Password"
+							value={password}
+							onChange={(e) => setPassword(e.target.value)}
+							className="admin-input"
+							required
+						/>
+						
+						<button 
+							type="submit" 
+							className="admin-btn admin-btn-primary"
+							disabled={loginLoading}
+						>
+							{loginLoading ? "Signing in..." : "Sign In"}
+						</button>
+					</form>
+					
+					<div style={{ marginTop: 20, fontSize: 12, color: "#888", textAlign: "center" }}>
+						<p>Demo credentials:</p>
+						<p>admin@vbs.local / Admin123!</p>
+					</div>
 				</div>
+			</div>
+		);
+	}
+
+	// Main Admin Panel
+	return (
+		<div className="admin-bg">
+			<div className="admin-container">
+				<div className="admin-header">
+					<div>
+						<h1 className="admin-title">VBS Admin Panel</h1>
+						<p className="admin-subtitle">
+							Logged in as {user?.name || user?.email} ({user?.role})
+						</p>
+					</div>
+					<button onClick={handleLogout} className="admin-btn admin-btn-secondary">
+						Logout
+					</button>
+				</div>
+
+				{/* Stats */}
+				{stats && (
+					<div className="admin-stats">
+						<div className="stat-card">
+							<span className="stat-value">{stats.total}</span>
+							<span className="stat-label">Total</span>
+						</div>
+						<div className="stat-card">
+							<span className="stat-value">{stats.paid}</span>
+							<span className="stat-label">Paid</span>
+						</div>
+						<div className="stat-card">
+							<span className="stat-value">{stats.checkedIn}</span>
+							<span className="stat-label">Checked In</span>
+						</div>
+						<div className="stat-card">
+							<span className="stat-value">GHS {((stats.revenue || 0) / 100).toFixed(0)}</span>
+							<span className="stat-label">Revenue</span>
+						</div>
+					</div>
+				)}
+
+				{/* Tabs */}
+				<div className="admin-tabs">
+					<button
+						className={`admin-tab ${activeTab === "manage" ? "active" : ""}`}
+						onClick={() => setActiveTab("manage")}
+					>
+						📋 Manage
+					</button>
+					<button
+						className={`admin-tab ${activeTab === "verify" ? "active" : ""}`}
+						onClick={() => setActiveTab("verify")}
+					>
+						✅ Verify
+					</button>
+					<button
+						className={`admin-tab ${activeTab === "create" ? "active" : ""}`}
+						onClick={() => setActiveTab("create")}
+					>
+						➕ Create
+					</button>
+				</div>
+
+				{error && <div className="admin-error">{error}</div>}
+
+				{/* Verify Tab */}
+				{activeTab === "verify" && (
+					<div className="admin-section">
+						<h2>Verify Ticket</h2>
+						<div className="verify-form">
+							<input
+								type="text"
+								placeholder="Enter ticket ID (e.g. VBS-123456)"
+								value={verifyCode}
+								onChange={(e) => setVerifyCode(e.target.value.toUpperCase())}
+								className="admin-input"
+								style={{ textTransform: "uppercase" }}
+							/>
+							<button
+								onClick={() => verifyTicket(verifyCode)}
+								disabled={verifying || !verifyCode}
+								className="admin-btn admin-btn-primary"
+							>
+								{verifying ? "Verifying..." : "Verify"}
+							</button>
+						</div>
+						{verifyResult && (
+							<div className={`verify-result ${verifyResult.startsWith("✅") ? "success" : verifyResult.startsWith("⚠️") ? "warning" : "error"}`}>
+								{verifyResult}
+							</div>
+						)}
+					</div>
+				)}
+
+				{/* Create Tab */}
+				{activeTab === "create" && (
+					<div className="admin-section">
+						<h2>Create Ticket</h2>
+						<form onSubmit={createTicket} className="create-form">
+							<input
+								type="text"
+								placeholder="Name"
+								value={name}
+								onChange={(e) => setName(e.target.value)}
+								className="admin-input"
+								required
+							/>
+							<input
+								type="tel"
+								placeholder="Phone (e.g. 0241234567)"
+								value={phone}
+								onChange={(e) => setPhone(e.target.value)}
+								className="admin-input"
+								required
+							/>
+							<select
+								value={ticketType}
+								onChange={(e) => setTicketType(e.target.value)}
+								className="admin-input"
+							>
+								<option value="Regular">Regular - GHS 300</option>
+								<option value="VIP">VIP - GHS 500</option>
+							</select>
+							<select
+								value={paymentStatus}
+								onChange={(e) => setPaymentStatus(e.target.value)}
+								className="admin-input"
+							>
+								<option value="Paid">Paid</option>
+								<option value="Pending">Pending Payment</option>
+							</select>
+							<button
+								type="submit"
+								disabled={loading}
+								className="admin-btn admin-btn-primary"
+							>
+								{loading ? "Creating..." : "Create Ticket"}
+							</button>
+						</form>
+					</div>
+				)}
+
+				{/* Manage Tab */}
+				{activeTab === "manage" && (
+					<div className="admin-section">
+						<div className="section-header">
+							<h2>Tickets ({tickets.length})</h2>
+							<button onClick={refresh} disabled={loading} className="admin-btn admin-btn-secondary">
+								{loading ? "Loading..." : "🔄 Refresh"}
+							</button>
+						</div>
+						
+						<div className="tickets-table-container">
+							<table className="tickets-table">
+								<thead>
+									<tr>
+										<th>Ticket ID</th>
+										<th>Name</th>
+										<th>Phone</th>
+										<th>Status</th>
+										<th>Actions</th>
+									</tr>
+								</thead>
+								<tbody>
+									{tickets.map((ticket) => (
+										<tr key={ticket.ticketId} className={ticket.status === "USED" ? "used" : ""}>
+											<td>
+												<code>{ticket.ticketId}</code>
+												<br />
+												<small style={{ color: "#888" }}>{ticket.accessCode}</small>
+											</td>
+											<td>{ticket.name}</td>
+											<td>{ticket.phone}</td>
+											<td>
+												<span className={`status-badge status-${ticket.status?.toLowerCase()}`}>
+													{ticket.status}
+												</span>
+											</td>
+											<td>
+												{ticket.status === "PAID" && (
+													<button
+														onClick={() => verifyTicket(ticket.ticketId)}
+														className="admin-btn-small admin-btn-success"
+													>
+														Check In
+													</button>
+												)}
+												{ticket.status !== "CANCELLED" && ticket.status !== "USED" && (
+													<button
+														onClick={() => deleteTicket(ticket.ticketId)}
+														className="admin-btn-small admin-btn-danger"
+													>
+														Cancel
+													</button>
+												)}
+											</td>
+										</tr>
+									))}
+									{tickets.length === 0 && (
+										<tr>
+											<td colSpan="5" style={{ textAlign: "center", padding: 40 }}>
+												No tickets found
+											</td>
+										</tr>
+									)}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				)}
 			</div>
 		</div>
 	);
 }
-
