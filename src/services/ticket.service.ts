@@ -2,52 +2,53 @@ import { prisma } from '../utils/prisma.js';
 import { generateUniqueTicketId, generateUniqueAccessCode } from '../utils/generators.js';
 import { normalizePhone } from '../utils/phone.js';
 import { logger } from '../utils/logger.js';
+import { TicketStatus } from '@prisma/client';
 import type {
   CreateTicketData,
   TicketData,
   TicketSearchOptions,
   PaginatedResult,
   VerifyTicketResult,
-  TicketStatus,
   ServiceResult,
 } from '../types/index.js';
 
 /**
- * Convert Prisma Payment to TicketData
+ * Convert Prisma Ticket to TicketData
  */
-function toTicketData(payment: {
-  id: number;
+function toTicketData(ticket: {
+  id: string;
   ticketId: string;
-  accessCode: string | null;
+  accessCode: string;
   name: string;
   phone: string;
-  ticketType: string;
-  status: string;
+  email: string | null;
+  eventId: string | null;
+  ticketTypeId: string | null;
+  status: TicketStatus;
   amount: number;
-  eventDate: string;
-  eventTime: string;
   used: boolean;
   verifiedAt: Date | null;
-  verifiedBy: string | null;
+  verifiedById: string | null;
   createdAt: Date;
   updatedAt: Date;
+  event?: { eventDate: Date; eventTime: string } | null;
 }): TicketData {
   return {
-    id: payment.id.toString(),
-    ticketId: payment.ticketId,
-    accessCode: payment.accessCode || '',
-    name: payment.name,
-    phone: payment.phone,
-    ticketType: payment.ticketType as TicketData['ticketType'],
-    status: payment.status as TicketStatus,
-    amount: payment.amount,
-    eventDate: payment.eventDate,
-    eventTime: payment.eventTime,
-    used: payment.used,
-    verifiedAt: payment.verifiedAt,
-    verifiedBy: payment.verifiedBy,
-    createdAt: payment.createdAt,
-    updatedAt: payment.updatedAt,
+    id: ticket.id,
+    ticketId: ticket.ticketId,
+    accessCode: ticket.accessCode,
+    name: ticket.name,
+    phone: ticket.phone,
+    ticketType: 'REGULAR' as TicketData['ticketType'], // TODO: get from ticketType relation
+    status: ticket.status as TicketData['status'],
+    amount: ticket.amount,
+    eventDate: ticket.event?.eventDate?.toISOString().split('T')[0] || 'TBD',
+    eventTime: ticket.event?.eventTime || '09:00 AM',
+    used: ticket.used,
+    verifiedAt: ticket.verifiedAt,
+    verifiedBy: ticket.verifiedById,
+    createdAt: ticket.createdAt,
+    updatedAt: ticket.updatedAt,
   };
 }
 
@@ -63,31 +64,32 @@ export async function createTicket(data: CreateTicketData): Promise<ServiceResul
 
     // Generate unique IDs
     const ticketId = await generateUniqueTicketId(async (id) => {
-      const existing = await prisma.payment.findUnique({ where: { ticketId: id } });
+      const existing = await prisma.ticket.findUnique({ where: { ticketId: id } });
       return !!existing;
     });
 
     const accessCode = await generateUniqueAccessCode(async (code) => {
-      const existing = await prisma.payment.findUnique({ where: { accessCode: code } });
+      const existing = await prisma.ticket.findUnique({ where: { accessCode: code } });
       return !!existing;
     });
 
-    const payment = await prisma.payment.create({
+    const ticket = await prisma.ticket.create({
       data: {
         name: data.name,
         phone: normalizedPhone,
         ticketId,
         accessCode,
-        ticketType: data.ticketType || 'Regular',
         amount: data.amount || 0,
-        status: data.status || 'Paid',
-        eventDate: 'Dec 27, 2025', // TODO: Make dynamic
-        eventTime: '09:00 AM',
+        status: data.status === 'PENDING' ? 'PENDING' : 'PAID',
+        eventId: data.eventId,
+      },
+      include: {
+        event: true,
       },
     });
 
     logger.info('Ticket created', { ticketId, phone: normalizedPhone });
-    return { success: true, data: toTicketData(payment) };
+    return { success: true, data: toTicketData(ticket) };
   } catch (error) {
     logger.error('Failed to create ticket', { error, data });
     return { success: false, error: 'Failed to create ticket', code: 'CREATE_FAILED' };
@@ -98,11 +100,12 @@ export async function createTicket(data: CreateTicketData): Promise<ServiceResul
  * Get ticket by ID
  */
 export async function getTicketById(ticketId: string): Promise<TicketData | null> {
-  const payment = await prisma.payment.findUnique({
+  const ticket = await prisma.ticket.findUnique({
     where: { ticketId: ticketId.toUpperCase() },
+    include: { event: true },
   });
   
-  return payment ? toTicketData(payment) : null;
+  return ticket ? toTicketData(ticket) : null;
 }
 
 /**
@@ -115,14 +118,15 @@ export async function getTicketByPhoneAndCode(
   const normalizedPhone = normalizePhone(phone);
   if (!normalizedPhone) return null;
 
-  const payment = await prisma.payment.findFirst({
+  const ticket = await prisma.ticket.findFirst({
     where: {
       phone: normalizedPhone,
       accessCode: accessCode.toUpperCase(),
     },
+    include: { event: true },
   });
 
-  return payment ? toTicketData(payment) : null;
+  return ticket ? toTicketData(ticket) : null;
 }
 
 /**
@@ -132,12 +136,13 @@ export async function getTicketsByPhone(phone: string): Promise<TicketData[]> {
   const normalizedPhone = normalizePhone(phone);
   if (!normalizedPhone) return [];
 
-  const payments = await prisma.payment.findMany({
+  const tickets = await prisma.ticket.findMany({
     where: { phone: normalizedPhone },
     orderBy: { createdAt: 'desc' },
+    include: { event: true },
   });
 
-  return payments.map(toTicketData);
+  return tickets.map(toTicketData);
 }
 
 /**
@@ -176,7 +181,7 @@ export async function searchTickets(
   }
 
   if (ticketType) {
-    where.ticketType = ticketType;
+    where.ticketType = { name: ticketType };
   }
 
   if (checkedIn !== undefined) {
@@ -190,20 +195,21 @@ export async function searchTickets(
   }
 
   // Execute query
-  const [payments, total] = await Promise.all([
-    prisma.payment.findMany({
+  const [tickets, total] = await Promise.all([
+    prisma.ticket.findMany({
       where,
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' },
+      include: { event: true },
     }),
-    prisma.payment.count({ where }),
+    prisma.ticket.count({ where }),
   ]);
 
   const totalPages = Math.ceil(total / limit);
 
   return {
-    data: payments.map(toTicketData),
+    data: tickets.map(toTicketData),
     pagination: {
       page,
       limit,
@@ -222,43 +228,46 @@ export async function verifyTicket(
   ticketId: string,
   verifiedBy: string
 ): Promise<VerifyTicketResult> {
-  const payment = await prisma.payment.findUnique({
+  const ticket = await prisma.ticket.findUnique({
     where: { ticketId: ticketId.toUpperCase() },
+    include: { event: true },
   });
 
-  if (!payment) {
+  if (!ticket) {
     return {
       success: false,
       message: 'Ticket not found',
     };
   }
 
-  if (payment.status !== 'Paid') {
+  if (ticket.status !== 'PAID') {
     return {
       success: false,
-      message: `Ticket status is ${payment.status}. Only paid tickets can be verified.`,
-      ticket: toTicketData(payment),
+      message: `Ticket status is ${ticket.status}. Only paid tickets can be verified.`,
+      ticket: toTicketData(ticket),
     };
   }
 
-  if (payment.used) {
+  if (ticket.used) {
     return {
       success: false,
       message: 'Ticket has already been used',
       alreadyUsed: true,
-      verifiedAt: payment.verifiedAt || undefined,
-      ticket: toTicketData(payment),
+      verifiedAt: ticket.verifiedAt || undefined,
+      ticket: toTicketData(ticket),
     };
   }
 
   // Mark as used
-  const updated = await prisma.payment.update({
+  const updated = await prisma.ticket.update({
     where: { ticketId: ticketId.toUpperCase() },
     data: {
       used: true,
+      status: 'USED',
       verifiedAt: new Date(),
-      verifiedBy,
+      verifiedById: verifiedBy,
     },
+    include: { event: true },
   });
 
   logger.info('Ticket verified', { ticketId, verifiedBy });
@@ -276,16 +285,17 @@ export async function verifyTicket(
  */
 export async function updateTicketStatus(
   ticketId: string,
-  status: TicketStatus
+  status: TicketData['status']
 ): Promise<ServiceResult<TicketData>> {
   try {
-    const payment = await prisma.payment.update({
+    const ticket = await prisma.ticket.update({
       where: { ticketId: ticketId.toUpperCase() },
-      data: { status },
+      data: { status: status as TicketStatus },
+      include: { event: true },
     });
 
     logger.info('Ticket status updated', { ticketId, status });
-    return { success: true, data: toTicketData(payment) };
+    return { success: true, data: toTicketData(ticket) };
   } catch (error) {
     logger.error('Failed to update ticket status', { ticketId, status, error });
     return { success: false, error: 'Ticket not found', code: 'NOT_FOUND' };
@@ -303,13 +313,13 @@ export async function getStats(): Promise<{
   revenue: number;
 }> {
   const [total, paid, pending, checkedIn, revenueResult] = await Promise.all([
-    prisma.payment.count(),
-    prisma.payment.count({ where: { status: 'Paid' } }),
-    prisma.payment.count({ where: { status: 'Pending' } }),
-    prisma.payment.count({ where: { used: true } }),
-    prisma.payment.aggregate({
+    prisma.ticket.count(),
+    prisma.ticket.count({ where: { status: 'PAID' } }),
+    prisma.ticket.count({ where: { status: 'PENDING' } }),
+    prisma.ticket.count({ where: { used: true } }),
+    prisma.ticket.aggregate({
       _sum: { amount: true },
-      where: { status: 'Paid' },
+      where: { status: 'PAID' },
     }),
   ]);
 
@@ -318,7 +328,7 @@ export async function getStats(): Promise<{
     paid,
     pending,
     checkedIn,
-    revenue: revenueResult._sum.amount || 0,
+    revenue: revenueResult._sum?.amount || 0,
   };
 }
 
@@ -361,9 +371,9 @@ export async function bulkCreateTickets(
  */
 export async function deleteTicket(ticketId: string): Promise<ServiceResult<void>> {
   try {
-    await prisma.payment.update({
+    await prisma.ticket.update({
       where: { ticketId: ticketId.toUpperCase() },
-      data: { status: 'Cancelled' },
+      data: { status: 'CANCELLED' },
     });
 
     logger.info('Ticket cancelled', { ticketId });

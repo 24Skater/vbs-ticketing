@@ -20,7 +20,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
-    "db:seed": "tsx src/scripts/seed.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:migrate-data": "tsx scripts/migrate-data.ts",
     "db:studio": "prisma studio",
     "prepare": "prisma generate"
   },

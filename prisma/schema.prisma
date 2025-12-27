@@ -8,21 +8,193 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Admin/Staff users for system access
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  name            String
+  role            UserRole  @default(STAFF)
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  sessions        Session[]
+  createdTickets  Ticket[]  @relation("CreatedBy")
+  verifiedTickets Ticket[]  @relation("VerifiedBy")
+
+  @@index([email])
+  @@map("users")
+}
+
+/// User sessions for authentication
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  refreshToken String   @unique
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([refreshToken])
+  @@map("sessions")
+}
+
+/// Events that tickets are sold for
+model Event {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  description String?
+  venue       String?
+  eventDate   DateTime
+  eventTime   String       @default("09:00 AM")
+  endDate     DateTime?
+  imageUrl    String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  ticketTypes TicketType[]
+  tickets     Ticket[]
+
+  @@index([slug])
+  @@index([eventDate])
+  @@map("events")
+}
+
+/// Ticket type definitions per event (VIP, Regular, etc.)
+model TicketType {
+  id          String   @id @default(cuid())
+  eventId     String
+  name        String
+  price       Int
+  quantity    Int
+  sold        Int      @default(0)
+  description String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tickets     Ticket[]
+
+  @@unique([eventId, name])
+  @@index([eventId])
+  @@map("ticket_types")
+}
+
+/// Individual tickets
+model Ticket {
+  id           String       @id @default(cuid())
+  ticketId     String       @unique
+  accessCode   String       @unique
+  eventId      String?
+  ticketTypeId String?
+  name         String
+  phone        String
+  email        String?
+  status       TicketStatus @default(PENDING)
+  amount       Int          @default(0)
+  used         Boolean      @default(false)
+  verifiedAt   DateTime?
+  verifiedById String?
+  notes        String?
+  createdById  String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  payments     Payment[]
+  createdBy    User?        @relation("CreatedBy", fields: [createdById], references: [id])
+  event        Event?       @relation(fields: [eventId], references: [id])
+  ticketType   TicketType?  @relation(fields: [ticketTypeId], references: [id])
+  verifiedBy   User?        @relation("VerifiedBy", fields: [verifiedById], references: [id])
+
+  @@index([ticketId])
+  @@index([accessCode])
+  @@index([phone])
+  @@index([eventId])
+  @@index([status])
+  @@map("tickets")
+}
+
+/// Payment transactions
 model Payment {
-  id         Int       @id @default(autoincrement())
-  name       String
-  phone      String
-  amount     Int
-  status     String    @default("Paid")
-  reference  String?
-  ticketType String    @default("Regular")
-  ticketId   String    @unique
-  eventDate  String    @default("Dec 27, 2025")
-  eventTime  String    @default("09:00 AM")
-  accessCode String?   @unique
-  used       Boolean   @default(false)
-  verifiedAt DateTime?
-  verifiedBy String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id              String          @id @default(cuid())
+  ticketId        String
+  amount          Int
+  currency        String          @default("GHS")
+  status          PaymentStatus   @default(PENDING)
+  provider        PaymentProvider @default(HUBTEL)
+  reference       String?         @unique
+  externalId      String?
+  channel         String?
+  customerMsisdn  String?
+  customerName    String?
+  providerMessage String?
+  metadata        Json?
+  paidAt          DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  ticket          Ticket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([reference])
+  @@index([externalId])
+  @@index([status])
+  @@map("payments")
+}
+
+/// Audit log for important actions
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+/// User roles for access control
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  STAFF
+  CHECKER
+}
+
+/// Ticket status enumeration
+enum TicketStatus {
+  PENDING
+  PAID
+  USED
+  CANCELLED
+  REFUNDED
+  EXPIRED
+}
+
+/// Payment status enumeration
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+/// Payment provider enumeration
+enum PaymentProvider {
+  HUBTEL
+  MANUAL
+  COMPLIMENTARY
 }
