@@ -1,50 +1,37 @@
+import { prisma } from '../utils/prisma.js';
 import { hashPassword, verifyPassword } from '../utils/password.js';
 import { generateTokenPair, verifyRefreshToken } from '../utils/jwt.js';
-import { generateSecureToken, generateSessionId } from '../utils/generators.js';
 import { logger, logSecurity } from '../utils/logger.js';
 import type { AuthTokens, UserData, UserRole, ServiceResult } from '../types/index.js';
 
 /**
- * Note: This service uses the existing "Payment" model for admin users
- * In Phase 3, we'll create proper User and Session models
- * For now, we use environment-based admin authentication
+ * Initialize default admin user if none exists
  */
-
-// In-memory session store (will be replaced with Prisma in Phase 3)
-const sessions = new Map<string, { userId: string; refreshToken: string; expiresAt: Date }>();
-
-// In-memory admin users (will be replaced with database in Phase 3)
-const adminUsers = new Map<string, {
-  id: string;
-  email: string;
-  name: string;
-  passwordHash: string;
-  role: UserRole;
-  createdAt: Date;
-}>();
-
-/**
- * Initialize default admin user from environment
- */
-export function initializeAdminUser(): void {
-  const adminKey = process.env.ADMIN_KEY;
-  if (adminKey) {
-    // Create a default admin based on ADMIN_KEY
-    const defaultAdmin = {
-      id: 'admin-default',
-      email: 'admin@vbs.local',
-      name: 'VBS Admin',
-      passwordHash: '', // Will be set on first use
-      role: 'SUPER_ADMIN' as UserRole,
-      createdAt: new Date(),
-    };
-    adminUsers.set(defaultAdmin.email, defaultAdmin);
-    logger.info('Default admin user initialized');
+export async function initializeAdminUser(): Promise<void> {
+  try {
+    const adminCount = await prisma.user.count({ where: { role: 'SUPER_ADMIN' } });
+    if (adminCount === 0) {
+      const passwordHash = await hashPassword('Admin123!');
+      await prisma.user.create({
+        data: {
+          email: 'admin@vbs.local',
+          name: 'VBS Admin',
+          passwordHash,
+          role: 'SUPER_ADMIN',
+          isActive: true,
+        },
+      });
+      logger.info('Default admin user created: admin@vbs.local / Admin123!');
+    } else {
+      logger.info('Admin user(s) already exist');
+    }
+  } catch (error) {
+    logger.error('Failed to initialize admin user', { error });
   }
 }
 
 /**
- * Register a new admin user
+ * Register a new user
  */
 export async function registerUser(
   email: string,
@@ -54,21 +41,22 @@ export async function registerUser(
 ): Promise<ServiceResult<UserData>> {
   try {
     // Check if user exists
-    if (adminUsers.has(email.toLowerCase())) {
+    const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    if (existing) {
       return { success: false, error: 'User already exists', code: 'USER_EXISTS' };
     }
 
     const passwordHash = await hashPassword(password);
-    const user = {
-      id: generateSessionId(),
-      email: email.toLowerCase(),
-      name,
-      passwordHash,
-      role,
-      createdAt: new Date(),
-    };
+    const user = await prisma.user.create({
+      data: {
+        email: email.toLowerCase(),
+        name,
+        passwordHash,
+        role: role as any,
+        isActive: true,
+      },
+    });
 
-    adminUsers.set(user.email, user);
     logSecurity('User registered', { email, role });
 
     return {
@@ -77,7 +65,7 @@ export async function registerUser(
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role,
+        role: user.role as UserRole,
         createdAt: user.createdAt,
       },
     };
@@ -95,42 +83,47 @@ export async function login(
   password: string
 ): Promise<ServiceResult<AuthTokens>> {
   try {
-    const user = adminUsers.get(email.toLowerCase());
+    const user = await prisma.user.findUnique({ 
+      where: { email: email.toLowerCase() } 
+    });
 
     if (!user) {
       logSecurity('Login failed - user not found', { email });
-      return { success: false, error: 'Invalid credentials', code: 'INVALID_CREDENTIALS' };
+      return { success: false, error: 'Invalid credentials', code: 'UNAUTHORIZED' };
     }
 
-    // For default admin, check against ADMIN_KEY
-    if (user.id === 'admin-default') {
-      const adminKey = process.env.ADMIN_KEY;
-      if (password !== adminKey) {
-        logSecurity('Login failed - invalid admin key', { email });
-        return { success: false, error: 'Invalid credentials', code: 'INVALID_CREDENTIALS' };
-      }
-    } else {
-      // Normal password verification
-      const isValid = await verifyPassword(password, user.passwordHash);
-      if (!isValid) {
-        logSecurity('Login failed - invalid password', { email });
-        return { success: false, error: 'Invalid credentials', code: 'INVALID_CREDENTIALS' };
-      }
+    if (!user.isActive) {
+      logSecurity('Login failed - user inactive', { email });
+      return { success: false, error: 'Account is disabled', code: 'ACCOUNT_DISABLED' };
+    }
+
+    // Verify password
+    const isValid = await verifyPassword(password, user.passwordHash);
+    if (!isValid) {
+      logSecurity('Login failed - invalid password', { email });
+      return { success: false, error: 'Invalid credentials', code: 'UNAUTHORIZED' };
     }
 
     // Generate tokens
     const tokens = generateTokenPair({
       userId: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role as UserRole,
+    });
+
+    // Update last login
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
     });
 
     // Store session
-    const sessionId = generateSessionId();
-    sessions.set(sessionId, {
-      userId: user.id,
-      refreshToken: tokens.refreshToken,
-      expiresAt: tokens.refreshTokenExpiresAt,
+    await prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshToken: tokens.refreshToken,
+        expiresAt: tokens.refreshTokenExpiresAt,
+      },
     });
 
     logSecurity('Login successful', { email, userId: user.id });
@@ -145,7 +138,7 @@ export async function login(
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role,
+          role: user.role as UserRole,
           createdAt: user.createdAt,
         },
       },
@@ -164,16 +157,26 @@ export async function refreshAccessToken(
 ): Promise<ServiceResult<{ accessToken: string; expiresIn: number }>> {
   try {
     const decoded = verifyRefreshToken(refreshToken);
-    const user = Array.from(adminUsers.values()).find(u => u.id === decoded.userId);
+    
+    // Verify session exists
+    const session = await prisma.session.findUnique({
+      where: { refreshToken },
+      include: { user: true },
+    });
 
-    if (!user) {
-      return { success: false, error: 'User not found', code: 'USER_NOT_FOUND' };
+    if (!session || session.expiresAt < new Date()) {
+      return { success: false, error: 'Invalid or expired session', code: 'INVALID_SESSION' };
+    }
+
+    const user = session.user;
+    if (!user.isActive) {
+      return { success: false, error: 'Account is disabled', code: 'ACCOUNT_DISABLED' };
     }
 
     const tokens = generateTokenPair({
       userId: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role as UserRole,
     });
 
     return {
@@ -192,28 +195,31 @@ export async function refreshAccessToken(
 /**
  * Logout - invalidate session
  */
-export async function logout(userId: string): Promise<void> {
-  // Remove all sessions for this user
-  for (const [sessionId, session] of sessions.entries()) {
-    if (session.userId === userId) {
-      sessions.delete(sessionId);
+export async function logout(userId: string, refreshToken?: string): Promise<void> {
+  try {
+    if (refreshToken) {
+      await prisma.session.deleteMany({ where: { refreshToken } });
+    } else {
+      await prisma.session.deleteMany({ where: { userId } });
     }
+    logSecurity('User logged out', { userId });
+  } catch (error) {
+    logger.error('Logout failed', { userId, error });
   }
-  logSecurity('User logged out', { userId });
 }
 
 /**
  * Get user by ID
  */
 export async function getUserById(userId: string): Promise<UserData | null> {
-  const user = Array.from(adminUsers.values()).find(u => u.id === userId);
+  const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return null;
 
   return {
     id: user.id,
     email: user.email,
     name: user.name,
-    role: user.role,
+    role: user.role as UserRole,
     createdAt: user.createdAt,
   };
 }
@@ -226,24 +232,24 @@ export async function changePassword(
   currentPassword: string,
   newPassword: string
 ): Promise<ServiceResult<void>> {
-  const user = Array.from(adminUsers.values()).find(u => u.id === userId);
+  const user = await prisma.user.findUnique({ where: { id: userId } });
   
   if (!user) {
     return { success: false, error: 'User not found', code: 'USER_NOT_FOUND' };
   }
 
   // Verify current password
-  if (user.id !== 'admin-default') {
-    const isValid = await verifyPassword(currentPassword, user.passwordHash);
-    if (!isValid) {
-      return { success: false, error: 'Current password is incorrect', code: 'INVALID_PASSWORD' };
-    }
+  const isValid = await verifyPassword(currentPassword, user.passwordHash);
+  if (!isValid) {
+    return { success: false, error: 'Current password is incorrect', code: 'INVALID_PASSWORD' };
   }
 
   // Hash and save new password
   const newHash = await hashPassword(newPassword);
-  user.passwordHash = newHash;
-  adminUsers.set(user.email, user);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: newHash },
+  });
 
   logSecurity('Password changed', { userId });
   return { success: true, data: undefined };
@@ -261,11 +267,15 @@ export function validateAdminKey(key: string): boolean {
  * Get all users (admin only)
  */
 export async function getAllUsers(): Promise<UserData[]> {
-  return Array.from(adminUsers.values()).map(user => ({
+  const users = await prisma.user.findMany({
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return users.map(user => ({
     id: user.id,
     email: user.email,
     name: user.name,
-    role: user.role,
+    role: user.role as UserRole,
     createdAt: user.createdAt,
   }));
 }
@@ -274,38 +284,19 @@ export async function getAllUsers(): Promise<UserData[]> {
  * Delete user (admin only)
  */
 export async function deleteUser(userId: string): Promise<ServiceResult<void>> {
-  const user = Array.from(adminUsers.values()).find(u => u.id === userId);
+  const user = await prisma.user.findUnique({ where: { id: userId } });
   
   if (!user) {
     return { success: false, error: 'User not found', code: 'USER_NOT_FOUND' };
   }
 
-  if (user.id === 'admin-default') {
-    return { success: false, error: 'Cannot delete default admin', code: 'FORBIDDEN' };
-  }
+  // Soft delete - just deactivate
+  await prisma.user.update({
+    where: { id: userId },
+    data: { isActive: false },
+  });
 
-  adminUsers.delete(user.email);
-  logSecurity('User deleted', { userId, deletedEmail: user.email });
+  logSecurity('User deactivated', { userId, email: user.email });
   
   return { success: true, data: undefined };
-}
-
-/**
- * Generate password reset token
- */
-export async function generatePasswordResetToken(
-  email: string
-): Promise<ServiceResult<string>> {
-  const user = adminUsers.get(email.toLowerCase());
-  
-  if (!user) {
-    // Don't reveal if user exists
-    return { success: true, data: '' };
-  }
-
-  const token = generateSecureToken();
-  // In Phase 3, store this in database with expiry
-  
-  logSecurity('Password reset requested', { email });
-  return { success: true, data: token };
 }
