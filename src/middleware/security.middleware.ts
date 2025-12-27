@@ -20,7 +20,7 @@ export const helmetMiddleware: RequestHandler = helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for UI
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // Allow Vite module scripts
       imgSrc: ["'self'", 'data:', 'blob:', 'https:'], // Allow data URIs for QR codes
       connectSrc: ["'self'", 'https://api.hubtel.com', 'https://rmp.hubtel.com'],
       fontSrc: ["'self'", 'https:', 'data:'],
