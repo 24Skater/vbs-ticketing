@@ -135,14 +135,14 @@ export function validateBody<T>(
 /**
  * Validate query parameters
  */
-export function validateQuery<T>(schema: ZodSchema<T>) {
+export function validateQuery(schema: ZodSchema) {
   return validate(schema, 'query');
 }
 
 /**
  * Validate URL parameters
  */
-export function validateParams<T>(schema: ZodSchema<T>) {
+export function validateParams(schema: ZodSchema) {
   return validate(schema, 'params');
 }
 

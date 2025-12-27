@@ -103,12 +103,12 @@ export const searchTicketsSchema = z.object({
   query: z.string().optional(),
   status: z.enum(['PENDING', 'PAID', 'USED', 'CANCELLED', 'REFUNDED', 'EXPIRED']).optional(),
   ticketType: ticketTypeSchema.optional(),
-  eventId: z.string().cuid().optional(),
-  checkedIn: z.enum(['true', 'false']).transform(val => val === 'true').optional(),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-  page: z.string().transform(Number).pipe(z.number().positive()).optional().default('1'),
-  limit: z.string().transform(Number).pipe(z.number().min(1).max(100)).optional().default('50'),
+  eventId: z.string().optional(),
+  checkedIn: z.string().transform(val => val === 'true').optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  page: z.coerce.number().positive().default(1),
+  limit: z.coerce.number().min(1).max(100).default(50),
 });
 
 /**
