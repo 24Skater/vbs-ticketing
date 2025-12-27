@@ -1,54 +1,49 @@
 import { useEffect, useState } from "react";
-import { downloadTicketPDF, lookupTicket } from "./api";
+import { useMutation } from "@tanstack/react-query";
+import { ticketsApi } from "./lib/api";
+import { Button, Input, Alert, Spinner } from "./components/ui";
 import QRCode from "qrcode";
-import hero from "./assets/hero.png";
 import "./App.css";
 
 export default function ViewTicket() {
   const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [ticket, setTicket] = useState(null);
-  const [downloading, setDownloading] = useState(false);
-  const [qrImage, setQrImage] = useState("");
   const [accessCode, setAccessCode] = useState("");
+  const [ticket, setTicket] = useState(null);
+  const [qrImage, setQrImage] = useState("");
+
+  // Lookup mutation
+  const lookupMutation = useMutation({
+    mutationFn: () => ticketsApi.lookup(phone, accessCode),
+    onSuccess: (data) => {
+      setTicket(data.data);
+    },
+  });
 
   const handleLookup = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
     setTicket(null);
-    try {
-      const res = await lookupTicket({ phone, accessCode });
-      setTicket(res);
-    } catch (err) {
-      const msg = err?.response?.data?.error || "Ticket not found";
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
+    lookupMutation.mutate();
   };
 
-  const handleDownload = async () => {
-    if (!ticket?.id) return;
-    setDownloading(true);
-    try {
-      await downloadTicketPDF(ticket.id);
-    } finally {
-      setDownloading(false);
-    }
+  const handleDownload = () => {
+    if (!ticket?.ticketId) return;
+    window.open(`/api/tickets/${encodeURIComponent(ticket.ticketId)}/pdf`, "_blank");
   };
 
+  // Generate QR code when ticket changes
   useEffect(() => {
     async function makeQR() {
+      if (!ticket?.ticketId) {
+        setQrImage("");
+        return;
+      }
       try {
-        if (!ticket?.ticketId) {
-          setQrImage("");
-          return;
-        }
-        const origin = typeof window !== "undefined" ? window.location.origin : "";
-        const verifyUrl = `${origin}/api/tickets/${encodeURIComponent(ticket.ticketId)}/verify`;
-        const dataUrl = await QRCode.toDataURL(verifyUrl, { margin: 1, scale: 7 });
+        const verifyData = `VBS:${ticket.ticketId}:${ticket.accessCode}`;
+        const dataUrl = await QRCode.toDataURL(verifyData, { 
+          margin: 1, 
+          scale: 7,
+          color: { dark: "#000000", light: "#ffffff" }
+        });
         setQrImage(dataUrl);
       } catch {
         setQrImage("");
@@ -67,86 +62,183 @@ export default function ViewTicket() {
   const ticketType = ticket?.ticketType || "Regular";
   let ticketStatus = (ticket?.status || "Paid").toString();
   if (ticket?.used) {
-    ticketStatus = "Used";
+    ticketStatus = "USED";
   }
-  const statusLower = ticketStatus.toLowerCase();
-  let statusClass = "ticket-status-pill";
-  if (statusLower.includes("paid") || statusLower.includes("success")) statusClass += " ticket-status-pill--paid";
-  else if (statusLower.includes("pending")) statusClass += " ticket-status-pill--pending";
-  else if (statusLower.includes("cancel") || statusLower.includes("invalid")) statusClass += " ticket-status-pill--cancelled";
-  const typeClass = `ticket-type-pill ${ticketType === "VIP" ? "ticket-type-pill--vip" : "ticket-type-pill--regular"}`;
+
+  const getStatusColor = (status) => {
+    const s = status.toLowerCase();
+    if (s === "paid" || s === "success") return "#10B981";
+    if (s === "used") return "#6B7280";
+    if (s === "pending") return "#F59E0B";
+    if (s.includes("cancel") || s.includes("refund")) return "#EF4444";
+    return "#6B7280";
+  };
 
   return (
-    <div className="ticket-preview-page" style={{ backgroundImage: `url(${hero})` }}>
-      <div className="ticket-preview-overlay">
-        <div className="ticket-preview-container">
-          <div className="ticket-card" style={{ maxWidth: 640 }}>
-            <div className="ticket-card-header">
-              <span className="ticket-season">Manual Lookup</span>
-              <h1 className="ticket-title">View Your Ticket</h1>
-              <p className="ticket-subtitle">Enter your phone number to find your ticket</p>
-            </div>
+    <div className="view-ticket-form">
+      {/* Search Form */}
+      <form onSubmit={handleLookup} style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 12 }}>
+          <Input
+            label="Phone Number"
+            type="tel"
+            placeholder="e.g. 0241234567"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            required
+            inputClassName="text-gray-900"
+          />
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <Input
+            label="Access Code"
+            type="text"
+            placeholder="e.g. K4Z8M"
+            value={accessCode}
+            onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+            required
+            maxLength={5}
+            inputClassName="text-gray-900 uppercase"
+          />
+        </div>
+        <Button 
+          type="submit" 
+          loading={lookupMutation.isPending}
+          disabled={!phone.trim() || !accessCode.trim()}
+          className="w-full"
+        >
+          {lookupMutation.isPending ? "Searching..." : "Find Ticket"}
+        </Button>
+      </form>
 
-            <form className="ticket-form" onSubmit={handleLookup} style={{ marginBottom: 16 }}>
-              <input
-                type="text"
-                placeholder="Phone Number"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
+      {/* Error */}
+      {lookupMutation.isError && (
+        <Alert variant="error" className="mb-4">
+          {lookupMutation.error?.message || "Ticket not found. Please check your phone number and access code."}
+        </Alert>
+      )}
+
+      {/* Ticket Display */}
+      {ticket && (
+        <div 
+          className="ticket-display"
+          style={{
+            background: "rgba(255,255,255,0.1)",
+            borderRadius: 12,
+            padding: 20,
+            marginTop: 16
+          }}
+        >
+          {/* Status Badge */}
+          <div style={{ 
+            display: "flex", 
+            justifyContent: "space-between", 
+            alignItems: "center",
+            marginBottom: 16 
+          }}>
+            <span style={{
+              background: ticketType === "VIP" ? "#8B5CF6" : "#3B82F6",
+              color: "white",
+              padding: "4px 12px",
+              borderRadius: 20,
+              fontSize: 12,
+              fontWeight: 600
+            }}>
+              {ticketType}
+            </span>
+            <span style={{
+              background: getStatusColor(ticketStatus),
+              color: "white",
+              padding: "4px 12px",
+              borderRadius: 20,
+              fontSize: 12,
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: 6
+            }}>
+              <span style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "white",
+                opacity: 0.7
+              }} />
+              {ticketStatus}
+            </span>
+          </div>
+
+          {/* Ticket Info */}
+          <div className="ticket-grid" style={{ 
+            display: "grid", 
+            gridTemplateColumns: "repeat(2, 1fr)", 
+            gap: 12 
+          }}>
+            <Info label="Name" value={ticket.name} />
+            <Info label="Phone" value={formatPhone(ticket.phone)} />
+            <Info label="Ticket ID" value={ticket.ticketId} />
+            <Info label="Access Code" value={ticket.accessCode} />
+            <Info label="Amount" value={`GHS ${(ticket.amount / 100).toFixed(2)}`} />
+            <Info label="Event" value={`${ticket.eventDate} • ${ticket.eventTime}`} />
+          </div>
+
+          {/* QR Code */}
+          <div style={{ 
+            textAlign: "center", 
+            marginTop: 20,
+            padding: 20,
+            background: "white",
+            borderRadius: 12
+          }}>
+            {qrImage ? (
+              <img 
+                src={qrImage} 
+                alt={`QR code for ${ticket.ticketId}`}
+                style={{ maxWidth: 200, margin: "0 auto" }}
               />
-              <input
-                type="text"
-                placeholder="Access Code (e.g. K4Z8M)"
-                value={accessCode}
-                onChange={(e) => setAccessCode(e.target.value)}
-                required
-              />
-              <button type="submit" disabled={loading}>{loading ? "Searching..." : "Find Ticket"}</button>
-            </form>
-            {error ? <small style={{ color: "#fecaca" }}>{error}</small> : null}
+            ) : (
+              <div style={{ padding: 20, color: "#6B7280" }}>
+                <Spinner size="md" />
+                <p>Generating QR code...</p>
+              </div>
+            )}
+            <p style={{ color: "#6B7280", fontSize: 13, marginTop: 8 }}>
+              Show this QR code at the entrance
+            </p>
+          </div>
 
-            {ticket ? (
-              <>
-                <div className="ticket-badges-row" style={{ marginBottom: 8 }}>
-                  <span className={typeClass}>{ticketType}</span>
-                  <span className={statusClass}>
-                    <span className="ticket-status-dot" />
-                    {ticketStatus}
-                  </span>
-                </div>
-                <div className="ticket-grid">
-                  <Info label="Full Name" value={ticket.name} />
-                  <Info label="Phone Number" value={ticket.phone} />
-                  <Info label="Ticket Type" value={ticket.ticketType} />
-                  <Info label="Ticket Code" value={ticket.ticketId} />
-                  <Info label="Amount" value={ticket.amount ? `₵${Number(ticket.amount).toFixed(2)}` : "—"} />
-                  <Info label="Event Date" value={`${ticket.eventDate || "Dec 27, 2025"} · ${ticket.eventTime || "09:00 AM"}`} />
-                  <Info label="Issued On" value={ticket.createdAt ? new Date(ticket.createdAt).toLocaleString() : "—"} />
-                  <Info label="Status" value={ticket.status} />
-                </div>
-
-                <div className="ticket-qr-section" style={{ marginTop: 12 }}>
-                  <div className="ticket-qr-box">
-                    {qrImage ? <img src={qrImage} alt={`QR code for ${ticket.ticketId}`} /> : <span className="ticket-qr-fallback">QR unavailable</span>}
-                  </div>
-                  <p className="ticket-qr-hint">Scan to verify your ticket instantly</p>
-                </div>
-
-                <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <button onClick={() => window.open(`/ticket/${encodeURIComponent(ticket.ticketId)}`, "_blank")}>Open Ticket Page</button>
-                  <button onClick={handleDownload} disabled={downloading || !ticket.id}>
-                    {downloading ? "Downloading..." : "Download Ticket (PDF)"}
-                  </button>
-                </div>
-              </>
-            ) : null}
+          {/* Actions */}
+          <div style={{ 
+            display: "flex", 
+            gap: 12, 
+            marginTop: 16,
+            flexWrap: "wrap"
+          }}>
+            <Button
+              variant="primary"
+              onClick={() => window.open(`/ticket/${encodeURIComponent(ticket.ticketId)}`, "_blank")}
+            >
+              Open Full Ticket
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleDownload}
+            >
+              Download PDF
+            </Button>
           </div>
         </div>
-      </div>
-      <footer className="footer">
-        <p>Powered by OxTech</p>
-      </footer>
+      )}
     </div>
   );
+}
+
+// Helper to format phone
+function formatPhone(phone) {
+  if (!phone) return "";
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("233")) {
+    return `0${digits.slice(3, 5)} ${digits.slice(5, 8)} ${digits.slice(8)}`;
+  }
+  return phone;
 }

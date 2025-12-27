@@ -2,6 +2,7 @@ import { useState } from "react";
 import hero from "./assets/hero.png";
 import TicketForm from "./TicketForm";
 import ViewTicket from "./ViewTicket";
+import { Button } from "./components/ui";
 import "./App.css";
 
 export default function TicketsPortal() {
@@ -15,36 +16,79 @@ export default function TicketsPortal() {
             <div className="ticket-card-header">
               <span className="ticket-season">Tickets Portal</span>
               <h1 className="ticket-title">VBS 2025</h1>
-              <p className="ticket-subtitle">Select what you want to do</p>
+              <p className="ticket-subtitle">
+                {mode === "none" && "Select what you want to do"}
+                {mode === "generate" && "Generate your ticket with payment"}
+                {mode === "view" && "View your existing ticket"}
+              </p>
             </div>
 
             {mode === "none" && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20, width: "100%" }}>
-                <button className="portal-card" onClick={() => setMode("generate")}>Generate Ticket</button>
-                <button className="portal-card" onClick={() => setMode("view")}>View Ticket</button>
+              <div 
+                className="portal-buttons"
+                style={{ 
+                  display: "grid", 
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", 
+                  gap: 20, 
+                  width: "100%",
+                  padding: "20px 0"
+                }}
+              >
+                <button 
+                  className="portal-card" 
+                  onClick={() => setMode("generate")}
+                  aria-label="Generate a new ticket"
+                >
+                  <span className="portal-card-icon" aria-hidden="true">🎫</span>
+                  <span className="portal-card-title">Generate Ticket</span>
+                  <span className="portal-card-desc">Pay and get your ticket</span>
+                </button>
+                <button 
+                  className="portal-card" 
+                  onClick={() => setMode("view")}
+                  aria-label="View your existing ticket"
+                >
+                  <span className="portal-card-icon" aria-hidden="true">👁️</span>
+                  <span className="portal-card-title">View Ticket</span>
+                  <span className="portal-card-desc">Check your ticket status</span>
+                </button>
               </div>
             )}
 
             {mode === "generate" && (
-              <div>
-                <h3 style={{ marginTop: 16, marginBottom: 8 }}>Automatic Ticket Generation</h3>
+              <div role="region" aria-label="Ticket generation form">
                 <TicketForm />
-                <button className="sign-out-button" type="button" onClick={() => setMode("none")} style={{ marginTop: 12 }}>Back</button>
+                <div style={{ marginTop: 16, textAlign: "center" }}>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => setMode("none")}
+                    aria-label="Go back to main menu"
+                  >
+                    ← Back to Menu
+                  </Button>
+                </div>
               </div>
             )}
 
             {mode === "view" && (
-              <div>
-                <h3 style={{ marginTop: 16, marginBottom: 8 }}>View Manual Ticket</h3>
+              <div role="region" aria-label="Ticket viewing form">
                 <ViewTicket />
-                <button className="sign-out-button" type="button" onClick={() => setMode("none")} style={{ marginTop: 12 }}>Back</button>
+                <div style={{ marginTop: 16, textAlign: "center" }}>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => setMode("none")}
+                    aria-label="Go back to main menu"
+                  >
+                    ← Back to Menu
+                  </Button>
+                </div>
               </div>
             )}
           </div>
         </div>
       </div>
-      <footer className="footer">
-        <p>Powered by OxTech</p>
+      <footer className="footer" role="contentinfo">
+        <p>Powered by OxTech Studio</p>
       </footer>
     </div>
   );
