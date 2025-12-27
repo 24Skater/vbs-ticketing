@@ -18,7 +18,7 @@ services:
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"  # Using 5433 externally to avoid conflicts
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U vbs_user -d vbs_ticketing"]
       interval: 5s
@@ -33,7 +33,7 @@ services:
     container_name: vbs-adminer
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8081:8080"  # Using 8081 to avoid conflicts
     depends_on:
       - db
     environment:
