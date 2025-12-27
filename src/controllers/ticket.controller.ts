@@ -15,9 +15,12 @@ export const createTicket = asyncHandler(async (req: Request, res: Response) => 
   const result = await ticketService.createTicket({
     name: data.name,
     phone: data.phone,
-    ticketType: data.ticketType,
+    email: data.email,
+    eventId: data.eventId,
+    ticketTypeId: data.ticketTypeId,
     amount: data.amount,
     status: data.status,
+    notes: data.notes,
   });
 
   if (!result.success) {
@@ -95,8 +98,9 @@ export const searchTickets = asyncHandler(async (req: Request, res: Response) =>
   const result = await ticketService.searchTickets({
     query: options.query,
     status: options.status,
-    ticketType: options.ticketType,
+    ticketTypeId: options.ticketTypeId,
     eventId: options.eventId,
+    phone: options.phone,
     checkedIn: options.checkedIn,
     startDate: options.startDate ? new Date(options.startDate) : undefined,
     endDate: options.endDate ? new Date(options.endDate) : undefined,

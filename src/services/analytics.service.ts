@@ -1,4 +1,5 @@
 import { prisma } from '../utils/prisma.js';
+import { formatCurrency } from '../utils/currency.js';
 import type { TicketStatus } from '@prisma/client';
 
 /**
@@ -97,6 +98,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       select: {
         reference: true,
         amount: true,
+        currency: true,
         customerName: true,
         paidAt: true,
       },
@@ -113,7 +115,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     ...recentPayments.map((p) => ({
       type: 'payment' as const,
       action: 'received',
-      details: `GHS ${(p.amount / 100).toFixed(2)} from ${p.customerName || 'Customer'}`,
+      details: `${formatCurrency(p.amount, p.currency)} from ${p.customerName || 'Customer'}`,
       timestamp: p.paidAt || new Date(),
     })),
   ]

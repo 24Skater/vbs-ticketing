@@ -6,11 +6,6 @@ import { Request } from 'express';
 export type TicketStatus = 'PENDING' | 'PAID' | 'USED' | 'CANCELLED' | 'REFUNDED' | 'EXPIRED';
 
 /**
- * Ticket type enum
- */
-export type TicketType = 'REGULAR' | 'VIP' | 'EARLY_BIRD' | 'COMPLIMENTARY';
-
-/**
  * Payment status enum
  */
 export type PaymentStatus = 'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELLED' | 'REFUNDED';
@@ -21,9 +16,9 @@ export type PaymentStatus = 'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELLED' | 'RE
 export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'STAFF' | 'CHECKER';
 
 /**
- * Mobile money channel
+ * Payment provider enum
  */
-export type MobileMoneyChannel = 'mtn-gh' | 'vodafone-gh' | 'tigo-gh' | 'airtel-gh';
+export type PaymentProvider = 'STRIPE' | 'PAYPAL' | 'HUBTEL' | 'SQUARE' | 'PAYSTACK' | 'FLUTTERWAVE' | 'MANUAL' | 'COMPLIMENTARY';
 
 /**
  * Ticket data for creation
@@ -31,10 +26,12 @@ export type MobileMoneyChannel = 'mtn-gh' | 'vodafone-gh' | 'tigo-gh' | 'airtel-
 export interface CreateTicketData {
   name: string;
   phone: string;
-  ticketType?: TicketType;
-  amount?: number;
+  email?: string | null;
   eventId?: string;
+  ticketTypeId?: string;
+  amount?: number;
   status?: 'PENDING' | 'PAID';
+  notes?: string;
 }
 
 /**
@@ -46,14 +43,20 @@ export interface TicketData {
   accessCode: string;
   name: string;
   phone: string;
-  ticketType: TicketType;
+  email?: string | null;
+  eventId?: string | null;
+  ticketTypeId?: string | null;
+  ticketTypeName?: string;
   status: TicketStatus;
   amount: number;
+  currency?: string;
   eventDate: string;
   eventTime: string;
+  eventName?: string;
   used: boolean;
   verifiedAt: Date | null;
   verifiedBy: string | null;
+  notes?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -64,8 +67,9 @@ export interface TicketData {
 export interface TicketSearchOptions {
   query?: string;
   status?: TicketStatus;
-  ticketType?: TicketType;
+  ticketTypeId?: string;
   eventId?: string;
+  phone?: string;
   checkedIn?: boolean;
   startDate?: Date;
   endDate?: Date;
@@ -128,39 +132,59 @@ export interface DashboardStats {
   soldToday: number;
   checkedIn: number;
   revenue: number;
+  currency: string;
   pendingPayments: number;
-  ticketsByType: Record<TicketType, number>;
+  ticketsByStatus: Record<TicketStatus, number>;
   recentActivity: Array<{
-    type: 'sale' | 'checkin' | 'refund';
-    ticketId: string;
+    type: 'sale' | 'checkin' | 'refund' | 'payment';
+    details: string;
     timestamp: Date;
   }>;
 }
 
 /**
- * Hubtel payment request
+ * Payment request (generic)
  */
-export interface HubtelPaymentRequest {
+export interface PaymentRequest {
   amount: number;
-  channel: MobileMoneyChannel;
-  customerMsisdn: string;
+  currency?: string;
+  provider?: PaymentProvider;
+  ticketId?: string;
+  customerPhone?: string;
+  customerEmail?: string;
   customerName?: string;
   description?: string;
-  clientReference: string;
-  callbackUrl?: string;
+  returnUrl?: string;
+  cancelUrl?: string;
+  metadata?: Record<string, unknown>;
 }
 
 /**
- * Hubtel webhook payload
+ * Payment result
  */
-export interface HubtelWebhookPayload {
+export interface PaymentResult {
+  success: boolean;
+  reference?: string;
+  externalId?: string;
+  redirectUrl?: string;
+  status?: PaymentStatus;
+  error?: string;
+}
+
+/**
+ * Webhook payload (generic)
+ */
+export interface WebhookPayload {
+  provider: string;
   status: string;
-  amount: number;
-  transactionId: string;
-  clientReference: string;
-  customerMsisdn: string;
+  amount?: number;
+  currency?: string;
+  reference?: string;
+  transactionId?: string;
+  customerPhone?: string;
   customerName?: string;
-  [key: string]: unknown;
+  metadata?: Record<string, unknown>;
+  raw?: unknown;
 }
 
 /**

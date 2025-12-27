@@ -1,65 +1,55 @@
 import { z } from 'zod';
+import { isValidPhone, normalizePhoneForStorage } from '../utils/phone.js';
 
 /**
- * Ghana phone number regex patterns
- */
-const GHANA_PHONE_PATTERNS = {
-  international: /^233\d{9}$/, // 233XXXXXXXXX
-  local: /^0\d{9}$/,          // 0XXXXXXXXX
-  short: /^\d{9}$/,           // XXXXXXXXX
-};
-
-/**
- * Check if phone is valid Ghana number
- */
-function isGhanaPhone(digits: string): boolean {
-  return (
-    GHANA_PHONE_PATTERNS.international.test(digits) ||
-    GHANA_PHONE_PATTERNS.local.test(digits) ||
-    GHANA_PHONE_PATTERNS.short.test(digits)
-  );
-}
-
-/**
- * Normalize Ghana phone to 233 format
- */
-function normalizeGhanaPhone(digits: string): string {
-  if (digits.startsWith('233') && digits.length === 12) return digits;
-  if (digits.startsWith('0') && digits.length === 10) return `233${digits.slice(1)}`;
-  if (digits.length === 9) return `233${digits}`;
-  return digits;
-}
-
-/**
- * Phone number schema with normalization
- * Accepts Ghana formats or any 10+ digit number
+ * International phone number schema with normalization
+ * Accepts phone numbers from any country
  */
 export const phoneSchema = z.string()
+  .min(7, 'Phone number must have at least 7 digits')
   .transform(val => val.replace(/[\s\-\(\)\.]/g, '')) // Remove formatting
   .transform(val => val.replace(/^\+/, ''))           // Remove leading +
   .refine(val => {
     const digits = val.replace(/\D/g, '');
-    return digits.length >= 9; // At least 9 digits
+    return digits.length >= 7 && digits.length <= 15;
   }, {
-    message: 'Phone number must have at least 9 digits',
+    message: 'Phone number must have between 7 and 15 digits',
   })
+  .transform(val => normalizePhoneForStorage(val));
+
+/**
+ * Optional phone schema for cases where phone is not required
+ */
+export const optionalPhoneSchema = z.string()
+  .optional()
+  .nullable()
   .transform(val => {
-    const digits = val.replace(/\D/g, '');
-    // If it's a Ghana number, normalize it
-    if (isGhanaPhone(digits)) {
-      return normalizeGhanaPhone(digits);
-    }
-    // Otherwise, keep as-is
-    return digits;
+    if (!val) return null;
+    const cleaned = val.replace(/[\s\-\(\)\.+]/g, '');
+    if (cleaned.length < 7) return null;
+    return normalizePhoneForStorage(val);
   });
 
 /**
- * Ticket ID format: VBS-XXXXXX (6 hex characters)
+ * Strict phone schema that validates the number is real
+ * Uses libphonenumber for validation
+ */
+export const strictPhoneSchema = z.string()
+  .refine(val => isValidPhone(val), {
+    message: 'Please enter a valid phone number',
+  })
+  .transform(val => normalizePhoneForStorage(val));
+
+/**
+ * Ticket ID format: Configurable prefix + unique identifier
+ * Default: VBS-XXXXXX (6 hex characters)
  */
 export const ticketIdSchema = z.string()
   .toUpperCase()
   .trim()
-  .regex(/^VBS-[A-F0-9]{6}$/, 'Invalid ticket ID format. Expected: VBS-XXXXXX');
+  .min(6, 'Ticket ID too short')
+  .max(20, 'Ticket ID too long')
+  .regex(/^[A-Z0-9\-]+$/, 'Invalid ticket ID format');
 
 /**
  * Access code format: 5 alphanumeric characters
@@ -71,9 +61,26 @@ export const accessCodeSchema = z.string()
   .regex(/^[A-Z0-9]{5}$/, 'Access code must contain only letters and numbers');
 
 /**
- * Ticket type enum
+ * Ticket status enum
  */
-export const ticketTypeSchema = z.enum(['REGULAR', 'VIP', 'EARLY_BIRD', 'COMPLIMENTARY']);
+export const ticketStatusSchema = z.enum([
+  'PENDING',
+  'PAID',
+  'USED',
+  'CANCELLED',
+  'REFUNDED',
+  'EXPIRED'
+]);
+
+/**
+ * Email validation
+ */
+export const emailSchema = z.string()
+  .email('Invalid email address')
+  .toLowerCase()
+  .trim()
+  .optional()
+  .nullable();
 
 /**
  * Create ticket validation
@@ -84,10 +91,12 @@ export const createTicketSchema = z.object({
     .max(100, 'Name must be less than 100 characters')
     .trim(),
   phone: phoneSchema,
-  ticketType: ticketTypeSchema.optional().default('REGULAR'),
+  email: emailSchema,
   eventId: z.string().cuid('Invalid event ID').optional(),
-  amount: z.number().positive('Amount must be positive').optional(),
+  ticketTypeId: z.string().cuid('Invalid ticket type ID').optional(),
+  amount: z.number().min(0, 'Amount cannot be negative').optional(),
   status: z.enum(['PENDING', 'PAID']).optional().default('PAID'),
+  notes: z.string().max(500).optional(),
 });
 
 /**
@@ -98,6 +107,7 @@ export const bulkCreateTicketSchema = z.object({
     .min(1, 'At least one ticket is required')
     .max(100, 'Maximum 100 tickets per batch'),
   eventId: z.string().cuid('Invalid event ID').optional(),
+  ticketTypeId: z.string().cuid('Invalid ticket type ID').optional(),
 });
 
 /**
@@ -120,12 +130,13 @@ export const lookupTicketSchema = z.object({
  */
 export const searchTicketsSchema = z.object({
   query: z.string().optional(),
-  status: z.enum(['PENDING', 'PAID', 'USED', 'CANCELLED', 'REFUNDED', 'EXPIRED']).optional(),
-  ticketType: ticketTypeSchema.optional(),
+  status: ticketStatusSchema.optional(),
   eventId: z.string().optional(),
+  ticketTypeId: z.string().optional(),
   checkedIn: z.string().transform(val => val === 'true').optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  phone: z.string().optional(),
   page: z.coerce.number().positive().default(1),
   limit: z.coerce.number().min(1).max(100).default(50),
 });
@@ -136,8 +147,11 @@ export const searchTicketsSchema = z.object({
 export const updateTicketSchema = z.object({
   name: z.string().min(2).max(100).trim().optional(),
   phone: phoneSchema.optional(),
-  ticketType: ticketTypeSchema.optional(),
+  email: emailSchema,
+  eventId: z.string().cuid().optional().nullable(),
+  ticketTypeId: z.string().cuid().optional().nullable(),
   status: z.enum(['PENDING', 'PAID', 'CANCELLED', 'REFUNDED']).optional(),
+  notes: z.string().max(500).optional(),
 });
 
 // Type exports
@@ -147,4 +161,3 @@ export type VerifyTicketInput = z.infer<typeof verifyTicketSchema>;
 export type LookupTicketInput = z.infer<typeof lookupTicketSchema>;
 export type SearchTicketsInput = z.infer<typeof searchTicketsSchema>;
 export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
-

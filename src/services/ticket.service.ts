@@ -29,9 +29,11 @@ function toTicketData(ticket: {
   used: boolean;
   verifiedAt: Date | null;
   verifiedById: string | null;
+  notes: string | null;
   createdAt: Date;
   updatedAt: Date;
-  event?: { eventDate: Date; eventTime: string } | null;
+  event?: { name: string; eventDate: Date; eventTime: string } | null;
+  ticketType?: { name: string } | null;
 }): TicketData {
   return {
     id: ticket.id,
@@ -39,14 +41,19 @@ function toTicketData(ticket: {
     accessCode: ticket.accessCode,
     name: ticket.name,
     phone: ticket.phone,
-    ticketType: 'REGULAR' as TicketData['ticketType'], // TODO: get from ticketType relation
+    email: ticket.email,
+    eventId: ticket.eventId,
+    ticketTypeId: ticket.ticketTypeId,
+    ticketTypeName: ticket.ticketType?.name,
     status: ticket.status as TicketData['status'],
     amount: ticket.amount,
+    eventName: ticket.event?.name,
     eventDate: ticket.event?.eventDate?.toISOString().split('T')[0] || 'TBD',
     eventTime: ticket.event?.eventTime || '09:00 AM',
     used: ticket.used,
     verifiedAt: ticket.verifiedAt,
     verifiedBy: ticket.verifiedById,
+    notes: ticket.notes,
     createdAt: ticket.createdAt,
     updatedAt: ticket.updatedAt,
   };
@@ -77,14 +84,18 @@ export async function createTicket(data: CreateTicketData): Promise<ServiceResul
       data: {
         name: data.name,
         phone: normalizedPhone,
+        email: data.email,
         ticketId,
         accessCode,
         amount: data.amount || 0,
         status: data.status === 'PENDING' ? 'PENDING' : 'PAID',
         eventId: data.eventId,
+        ticketTypeId: data.ticketTypeId,
+        notes: data.notes,
       },
       include: {
         event: true,
+        ticketType: true,
       },
     });
 
@@ -154,7 +165,9 @@ export async function searchTickets(
   const {
     query,
     status,
-    ticketType,
+    ticketTypeId,
+    eventId,
+    phone,
     checkedIn,
     startDate,
     endDate,
@@ -173,6 +186,7 @@ export async function searchTickets(
       { name: { contains: query, mode: 'insensitive' } },
       { phone: { contains: query } },
       { ticketId: { contains: query.toUpperCase() } },
+      { email: { contains: query, mode: 'insensitive' } },
     ];
   }
 
@@ -180,8 +194,16 @@ export async function searchTickets(
     where.status = status;
   }
 
-  if (ticketType) {
-    where.ticketType = { name: ticketType };
+  if (ticketTypeId) {
+    where.ticketTypeId = ticketTypeId;
+  }
+
+  if (eventId) {
+    where.eventId = eventId;
+  }
+
+  if (phone) {
+    where.phone = { contains: phone };
   }
 
   if (checkedIn !== undefined) {

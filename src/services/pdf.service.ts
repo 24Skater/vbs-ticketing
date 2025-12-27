@@ -108,7 +108,7 @@ export async function generateTicketPDF(ticket: TicketData): Promise<Buffer> {
       const details = [
         { label: 'Name', value: ticket.name },
         { label: 'Phone', value: formatPhone(ticket.phone) },
-        { label: 'Type', value: ticket.ticketType },
+        { label: 'Type', value: ticket.ticketTypeName || 'Standard' },
         { label: 'Date', value: ticket.eventDate },
         { label: 'Time', value: ticket.eventTime },
       ];
@@ -279,7 +279,7 @@ async function renderMiniTicket(
 
   detailsY += 18;
 
-  doc.text(`Type: ${ticket.ticketType}`, detailsX, detailsY);
+  doc.text(`Type: ${ticket.ticketTypeName || 'Standard'}`, detailsX, detailsY);
 
   detailsY += 18;
 
