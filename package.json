@@ -23,7 +23,12 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:migrate-data": "tsx scripts/migrate-data.ts",
     "db:studio": "prisma studio",
-    "prepare": "prisma generate"
+    "prepare": "prisma generate",
+    "docker:dev": "docker-compose -f docker-compose.dev.yml up",
+    "docker:dev:down": "docker-compose -f docker-compose.dev.yml down",
+    "docker:build": "docker build -t vbs-ticketing .",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
   },
   "author": "Osei Bonsu Aboagye (OxTech Studio)",
   "license": "MIT",

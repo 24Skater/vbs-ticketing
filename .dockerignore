@@ -1,0 +1,63 @@
+# Dependencies
+node_modules
+frontend/node_modules
+admin-panel/node_modules
+
+# Build outputs
+dist
+frontend/dist
+*.tsbuildinfo
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Test files
+coverage
+*.test.ts
+*.spec.ts
+__tests__
+**/__tests__
+
+# Documentation
+*.md
+!README.md
+docs
+
+# Development
+.cursor
+terminals
+agent-tools
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary
+tmp
+temp
+*.tmp
+
+# Legacy/unused
+admin-panel
+admin-frontend
+new-admin-panel
+vbs-ticketing25
+server.js
+
