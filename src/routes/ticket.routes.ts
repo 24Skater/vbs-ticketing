@@ -73,6 +73,38 @@ router.post(
   ticketController.bulkCreate
 );
 
+// Bulk verify/check-in tickets
+router.post(
+  '/bulk/verify',
+  requireAuth,
+  requireRole('CHECKER', 'STAFF', 'ADMIN', 'SUPER_ADMIN'),
+  ticketController.bulkVerify
+);
+
+// Bulk cancel tickets
+router.post(
+  '/bulk/cancel',
+  requireAuth,
+  requireRole('ADMIN', 'SUPER_ADMIN'),
+  ticketController.bulkCancel
+);
+
+// Bulk update status
+router.post(
+  '/bulk/status',
+  requireAuth,
+  requireRole('ADMIN', 'SUPER_ADMIN'),
+  ticketController.bulkUpdateStatus
+);
+
+// Preview bulk operation
+router.post(
+  '/bulk/preview',
+  requireAuth,
+  requireRole('STAFF', 'ADMIN', 'SUPER_ADMIN'),
+  ticketController.bulkPreview
+);
+
 // Get single ticket by ID
 router.get(
   '/:ticketId',

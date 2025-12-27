@@ -3,6 +3,7 @@ import * as ticketService from '../services/ticket.service.js';
 import { generateTicketPDF } from '../services/pdf.service.js';
 import { asyncHandler, Errors } from '../middleware/errorHandler.middleware.js';
 import type { CreateTicketInput, SearchTicketsInput } from '../validators/ticket.validator.js';
+import type { AuthenticatedRequest } from '../types/index.js';
 
 /**
  * Create a new ticket
@@ -236,4 +237,92 @@ export const downloadPDF = asyncHandler(async (req: Request, res: Response) => {
   res.setHeader('Content-Length', pdfBuffer.length);
   
   res.send(pdfBuffer);
+});
+
+/**
+ * Bulk verify/check-in tickets
+ * POST /api/tickets/bulk/verify
+ */
+export const bulkVerify = asyncHandler(async (req: Request, res: Response) => {
+  const { ticketIds } = req.body;
+  const authReq = req as AuthenticatedRequest;
+
+  if (!Array.isArray(ticketIds) || ticketIds.length === 0) {
+    throw Errors.badRequest('ticketIds must be a non-empty array');
+  }
+
+  const result = await ticketService.bulkVerifyTickets(ticketIds, authReq.userId);
+
+  res.json({
+    success: true,
+    data: result,
+    message: `Verified ${result.success} tickets, ${result.failed} failed, ${result.alreadyUsed} already used`,
+  });
+});
+
+/**
+ * Bulk cancel tickets
+ * POST /api/tickets/bulk/cancel
+ */
+export const bulkCancel = asyncHandler(async (req: Request, res: Response) => {
+  const { ticketIds } = req.body;
+
+  if (!Array.isArray(ticketIds) || ticketIds.length === 0) {
+    throw Errors.badRequest('ticketIds must be a non-empty array');
+  }
+
+  const result = await ticketService.bulkCancelTickets(ticketIds);
+
+  res.json({
+    success: true,
+    data: result,
+    message: `Cancelled ${result.success} tickets, ${result.failed} failed`,
+  });
+});
+
+/**
+ * Bulk update ticket status
+ * POST /api/tickets/bulk/status
+ */
+export const bulkUpdateStatus = asyncHandler(async (req: Request, res: Response) => {
+  const { ticketIds, status } = req.body;
+
+  if (!Array.isArray(ticketIds) || ticketIds.length === 0) {
+    throw Errors.badRequest('ticketIds must be a non-empty array');
+  }
+
+  if (!status) {
+    throw Errors.badRequest('status is required');
+  }
+
+  const result = await ticketService.bulkUpdateStatus(ticketIds, status);
+
+  res.json({
+    success: true,
+    data: result,
+    message: `Updated ${result.success} tickets to ${status}`,
+  });
+});
+
+/**
+ * Preview bulk operation
+ * POST /api/tickets/bulk/preview
+ */
+export const bulkPreview = asyncHandler(async (req: Request, res: Response) => {
+  const { ticketIds } = req.body;
+
+  if (!Array.isArray(ticketIds) || ticketIds.length === 0) {
+    throw Errors.badRequest('ticketIds must be a non-empty array');
+  }
+
+  const tickets = await ticketService.getTicketsByIds(ticketIds);
+
+  res.json({
+    success: true,
+    data: {
+      found: tickets.length,
+      notFound: ticketIds.length - tickets.length,
+      tickets,
+    },
+  });
 });

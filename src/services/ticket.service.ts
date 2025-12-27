@@ -383,3 +383,114 @@ export async function deleteTicket(ticketId: string): Promise<ServiceResult<void
     return { success: false, error: 'Ticket not found', code: 'NOT_FOUND' };
   }
 }
+
+/**
+ * Bulk verify/check-in tickets
+ */
+export async function bulkVerifyTickets(
+  ticketIds: string[],
+  verifiedBy: string
+): Promise<{
+  success: number;
+  failed: number;
+  alreadyUsed: number;
+  results: Array<{ ticketId: string; status: 'verified' | 'failed' | 'already_used' }>;
+}> {
+  const results: Array<{ ticketId: string; status: 'verified' | 'failed' | 'already_used' }> = [];
+  let success = 0;
+  let failed = 0;
+  let alreadyUsed = 0;
+
+  for (const ticketId of ticketIds) {
+    const result = await verifyTicket(ticketId, verifiedBy);
+    
+    if (result.success) {
+      success++;
+      results.push({ ticketId, status: 'verified' });
+    } else if (result.alreadyUsed) {
+      alreadyUsed++;
+      results.push({ ticketId, status: 'already_used' });
+    } else {
+      failed++;
+      results.push({ ticketId, status: 'failed' });
+    }
+  }
+
+  logger.info('Bulk verification completed', { total: ticketIds.length, success, failed, alreadyUsed });
+
+  return { success, failed, alreadyUsed, results };
+}
+
+/**
+ * Bulk cancel tickets
+ */
+export async function bulkCancelTickets(
+  ticketIds: string[]
+): Promise<{
+  success: number;
+  failed: number;
+  results: Array<{ ticketId: string; status: 'cancelled' | 'failed' }>;
+}> {
+  const results: Array<{ ticketId: string; status: 'cancelled' | 'failed' }> = [];
+  let success = 0;
+  let failed = 0;
+
+  for (const ticketId of ticketIds) {
+    try {
+      await prisma.ticket.update({
+        where: { ticketId: ticketId.toUpperCase() },
+        data: { status: 'CANCELLED' },
+      });
+      success++;
+      results.push({ ticketId, status: 'cancelled' });
+    } catch {
+      failed++;
+      results.push({ ticketId, status: 'failed' });
+    }
+  }
+
+  logger.info('Bulk cancellation completed', { total: ticketIds.length, success, failed });
+
+  return { success, failed, results };
+}
+
+/**
+ * Bulk update ticket status
+ */
+export async function bulkUpdateStatus(
+  ticketIds: string[],
+  status: TicketStatus
+): Promise<{
+  success: number;
+  failed: number;
+}> {
+  try {
+    const result = await prisma.ticket.updateMany({
+      where: { ticketId: { in: ticketIds.map(id => id.toUpperCase()) } },
+      data: { status },
+    });
+
+    logger.info('Bulk status update completed', { 
+      total: ticketIds.length, 
+      updated: result.count, 
+      status 
+    });
+
+    return { success: result.count, failed: ticketIds.length - result.count };
+  } catch (error) {
+    logger.error('Bulk status update failed', { error });
+    return { success: 0, failed: ticketIds.length };
+  }
+}
+
+/**
+ * Get tickets by IDs (for bulk operations preview)
+ */
+export async function getTicketsByIds(ticketIds: string[]): Promise<TicketData[]> {
+  const tickets = await prisma.ticket.findMany({
+    where: { ticketId: { in: ticketIds.map(id => id.toUpperCase()) } },
+    include: { event: true },
+  });
+
+  return tickets.map(toTicketData);
+}

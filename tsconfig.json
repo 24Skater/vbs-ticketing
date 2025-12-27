@@ -27,6 +27,6 @@
     "baseUrl": "."
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "frontend", "admin-panel", "admin-frontend", "new-admin-panel", "vbs-ticketing25"]
+  "exclude": ["node_modules", "dist", "frontend", "admin-panel", "admin-frontend", "new-admin-panel", "vbs-ticketing25", "src/**/__tests__/**", "src/**/*.test.ts", "src/**/*.spec.ts"]
 }
 
