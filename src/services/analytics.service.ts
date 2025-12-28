@@ -318,7 +318,7 @@ export async function exportTicketData(options: {
     ticketType: t.ticketType?.name || 'Standard',
     status: t.status,
     amount: t.amount,
-    eventName: t.event?.name || 'VBS 2025',
+    eventName: t.event?.name || 'Event',
     eventDate: t.event?.eventDate || new Date(),
     createdAt: t.createdAt,
     verifiedAt: t.verifiedAt,

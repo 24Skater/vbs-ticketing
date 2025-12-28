@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as analyticsService from '../services/analytics.service.js';
+import { getSiteConfig } from '../services/config.service.js';
 import { asyncHandler } from '../middleware/errorHandler.middleware.js';
 
 /**
@@ -66,6 +67,9 @@ export const exportTickets = asyncHandler(async (req: Request, res: Response) =>
 
   // Return as JSON or CSV based on format
   if (format === 'csv') {
+    const config = await getSiteConfig();
+    const currencyCode = config.currency || 'USD';
+    
     const headers = [
       'Ticket ID',
       'Name',
@@ -73,7 +77,7 @@ export const exportTickets = asyncHandler(async (req: Request, res: Response) =>
       'Email',
       'Type',
       'Status',
-      'Amount (GHS)',
+      `Amount (${currencyCode})`,
       'Event',
       'Event Date',
       'Created',

@@ -69,10 +69,11 @@ export const sampleTicket = {
   eventId: 'event-123',
   ticketTypeId: 'type-123',
   name: 'John Doe',
-  phone: '233241234567',
+  phone: '+12125551234', // International E.164 format
   email: 'john@example.com',
   status: 'PAID' as TicketStatus,
-  amount: 30000, // 300 GHS in pesewas
+  amount: 5000, // $50.00 in cents
+  currency: 'USD',
   used: false,
   verifiedAt: null,
   verifiedById: null,
@@ -87,10 +88,10 @@ export const sampleTicket = {
  */
 export const sampleEvent = {
   id: 'event-123',
-  name: 'VBS 2025',
-  slug: 'vbs-2025',
-  description: 'Vacation Bible School 2025',
-  venue: 'ICS Pakyi No. 2',
+  name: 'Sample Event 2025',
+  slug: 'sample-event-2025',
+  description: 'A sample event for testing',
+  venue: 'Main Convention Center',
   eventDate: new Date('2025-12-27'),
   eventTime: '09:00 AM',
   endDate: null,
@@ -106,14 +107,14 @@ export const sampleEvent = {
 export const samplePayment = {
   id: 'payment-123',
   ticketId: 'ticket-123',
-  amount: 30000,
-  currency: 'GHS',
+  amount: 5000, // $50.00 in cents
+  currency: 'USD',
   status: 'SUCCESS',
-  provider: 'HUBTEL',
+  provider: 'MANUAL',
   reference: 'REF-123456',
-  externalId: 'HUB-789',
-  channel: 'mtn-gh',
-  customerMsisdn: '233241234567',
+  externalId: 'PAY-789',
+  channel: null,
+  customerMsisdn: '+12125551234',
   customerName: 'John Doe',
   providerMessage: 'Payment successful',
   metadata: null,

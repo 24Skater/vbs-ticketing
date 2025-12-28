@@ -2,6 +2,9 @@ import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
 import { PassThrough } from 'stream';
 import type { TicketData } from '../types/index.js';
+import { getSiteConfig } from './config.service.js';
+import { formatPhone } from '../utils/phone.js';
+import { formatCurrency } from '../utils/currency.js';
 
 /**
  * Generate QR code as data URL
@@ -21,6 +24,9 @@ async function generateQRCode(data: string): Promise<string> {
  * Generate a PDF ticket
  */
 export async function generateTicketPDF(ticket: TicketData): Promise<Buffer> {
+  // Get site config for branding
+  const config = await getSiteConfig();
+  
   return new Promise(async (resolve, reject) => {
     try {
       const doc = new PDFDocument({
@@ -37,23 +43,25 @@ export async function generateTicketPDF(ticket: TicketData): Promise<Buffer> {
 
       doc.pipe(stream);
 
-      // Colors
-      const primaryColor = '#4F46E5';
-      const textColor = '#1F2937';
-      const mutedColor = '#6B7280';
+      // Colors from config
+      const primaryColor = config.primaryColor || '#4F46E5';
+      const textColor = config.textColor || '#1F2937';
+      const mutedColor = config.textMutedColor || '#6B7280';
 
-      // Header
+      // Header - Organization name from config
       doc
         .fillColor(primaryColor)
         .fontSize(28)
         .font('Helvetica-Bold')
-        .text('VBS 2025', { align: 'center' });
+        .text(config.orgName || 'Event Ticket', { align: 'center' });
 
-      doc
-        .fontSize(12)
-        .fillColor(mutedColor)
-        .font('Helvetica')
-        .text('Vacation Bible School', { align: 'center' });
+      if (config.orgDescription) {
+        doc
+          .fontSize(12)
+          .fillColor(mutedColor)
+          .font('Helvetica')
+          .text(config.orgDescription, { align: 'center' });
+      }
 
       doc.moveDown(1.5);
 
@@ -68,7 +76,7 @@ export async function generateTicketPDF(ticket: TicketData): Promise<Buffer> {
       doc.moveDown(1);
 
       // QR Code
-      const qrData = `VBS:${ticket.ticketId}:${ticket.accessCode}`;
+      const qrData = `TICKET:${ticket.ticketId}:${ticket.accessCode}`;
       const qrDataUrl = await generateQRCode(qrData);
       const qrBuffer = Buffer.from(qrDataUrl.split(',')[1], 'base64');
       
@@ -107,8 +115,9 @@ export async function generateTicketPDF(ticket: TicketData): Promise<Buffer> {
       // Attendee Details
       const details = [
         { label: 'Name', value: ticket.name },
-        { label: 'Phone', value: formatPhone(ticket.phone) },
+        { label: 'Phone', value: formatPhone(ticket.phone, 'INTERNATIONAL') },
         { label: 'Type', value: ticket.ticketTypeName || 'Standard' },
+        { label: 'Amount', value: formatCurrency(ticket.amount, ticket.currency || config.currency || 'USD', config.locale || 'en-US') },
         { label: 'Date', value: ticket.eventDate },
         { label: 'Time', value: ticket.eventTime },
       ];
@@ -159,6 +168,12 @@ export async function generateTicketPDF(ticket: TicketData): Promise<Buffer> {
         .text('Present this ticket at the venue entrance.', { align: 'center' })
         .text('Keep your access code safe for online verification.', { align: 'center' });
 
+      // Optional footer text from config
+      if (config.footerText) {
+        doc.moveDown(0.5);
+        doc.text(config.footerText, { align: 'center' });
+      }
+
       doc.end();
     } catch (error) {
       reject(error);
@@ -167,19 +182,12 @@ export async function generateTicketPDF(ticket: TicketData): Promise<Buffer> {
 }
 
 /**
- * Format phone number for display
- */
-function formatPhone(phone: string): string {
-  if (phone.startsWith('233') && phone.length === 12) {
-    return `0${phone.slice(3, 5)} ${phone.slice(5, 8)} ${phone.slice(8)}`;
-  }
-  return phone;
-}
-
-/**
  * Generate multiple tickets PDF (for bulk printing)
  */
 export async function generateBulkTicketsPDF(tickets: TicketData[]): Promise<Buffer> {
+  // Get site config for branding
+  const config = await getSiteConfig();
+  
   return new Promise(async (resolve, reject) => {
     try {
       const doc = new PDFDocument({
@@ -205,7 +213,7 @@ export async function generateBulkTicketsPDF(tickets: TicketData[]): Promise<Buf
         const ticket = tickets[i];
         const yOffset = (i % 2) * 380;
 
-        await renderMiniTicket(doc, ticket, 20, 20 + yOffset);
+        await renderMiniTicket(doc, ticket, 20, 20 + yOffset, config);
       }
 
       doc.end();
@@ -222,10 +230,14 @@ async function renderMiniTicket(
   doc: typeof PDFDocument.prototype,
   ticket: TicketData,
   x: number,
-  y: number
+  y: number,
+  config: Awaited<ReturnType<typeof getSiteConfig>>
 ): Promise<void> {
   const width = 555;
   const height = 360;
+
+  // Colors from config
+  const primaryColor = config.primaryColor || '#4F46E5';
 
   // Border
   doc
@@ -236,16 +248,16 @@ async function renderMiniTicket(
 
   // Header background
   doc
-    .fillColor('#4F46E5')
+    .fillColor(primaryColor)
     .rect(x, y, width, 50)
     .fill();
 
-  // Header text
+  // Header text - Organization name from config
   doc
     .fillColor('#FFFFFF')
     .fontSize(20)
     .font('Helvetica-Bold')
-    .text('VBS 2025', x + 20, y + 15, { width: width - 40 });
+    .text(config.orgName || 'Event Ticket', x + 20, y + 15, { width: width - 40 });
 
   doc
     .fontSize(10)
@@ -253,7 +265,7 @@ async function renderMiniTicket(
     .text(ticket.ticketId, x + 20, y + 15, { width: width - 40, align: 'right' });
 
   // QR Code
-  const qrData = `VBS:${ticket.ticketId}:${ticket.accessCode}`;
+  const qrData = `TICKET:${ticket.ticketId}:${ticket.accessCode}`;
   const qrDataUrl = await generateQRCode(qrData);
   const qrBuffer = Buffer.from(qrDataUrl.split(',')[1], 'base64');
   
@@ -275,11 +287,15 @@ async function renderMiniTicket(
     .fillColor('#6B7280')
     .fontSize(11)
     .font('Helvetica')
-    .text(`Phone: ${formatPhone(ticket.phone)}`, detailsX, detailsY);
+    .text(`Phone: ${formatPhone(ticket.phone, 'INTERNATIONAL')}`, detailsX, detailsY);
 
   detailsY += 18;
 
   doc.text(`Type: ${ticket.ticketTypeName || 'Standard'}`, detailsX, detailsY);
+
+  detailsY += 18;
+
+  doc.text(`Amount: ${formatCurrency(ticket.amount, ticket.currency || config.currency || 'USD', config.locale || 'en-US')}`, detailsX, detailsY);
 
   detailsY += 18;
 
@@ -293,7 +309,7 @@ async function renderMiniTicket(
 
   // Access Code (larger, prominent)
   doc
-    .fillColor('#4F46E5')
+    .fillColor(primaryColor)
     .fontSize(14)
     .font('Helvetica-Bold')
     .text(`Access Code: ${ticket.accessCode}`, detailsX, detailsY);
@@ -321,4 +337,3 @@ export default {
   generateTicketPDF,
   generateBulkTicketsPDF,
 };
-

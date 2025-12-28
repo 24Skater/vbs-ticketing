@@ -87,10 +87,30 @@ describe('Validators', () => {
 
   describe('Ticket Validators', () => {
     describe('createTicketSchema', () => {
-      it('should validate correct ticket data', () => {
+      it('should validate correct ticket data with international phone', () => {
         const result = createTicketSchema.safeParse({
           name: 'John Doe',
-          phone: '0241234567',
+          phone: '+12125551234', // US format
+          amount: 5000,
+        });
+        
+        expect(result.success).toBe(true);
+      });
+
+      it('should validate UK phone number', () => {
+        const result = createTicketSchema.safeParse({
+          name: 'Jane Smith',
+          phone: '+442071234567', // UK format
+          amount: 3000,
+        });
+        
+        expect(result.success).toBe(true);
+      });
+
+      it('should validate Ghana phone number', () => {
+        const result = createTicketSchema.safeParse({
+          name: 'Kofi Mensah',
+          phone: '+233241234567', // Ghana format
           amount: 30000,
         });
         
@@ -99,8 +119,8 @@ describe('Validators', () => {
 
       it('should reject missing name', () => {
         const result = createTicketSchema.safeParse({
-          phone: '0241234567',
-          amount: 30000,
+          phone: '+12125551234',
+          amount: 5000,
         });
         
         expect(result.success).toBe(false);
@@ -109,8 +129,8 @@ describe('Validators', () => {
       it('should reject short name', () => {
         const result = createTicketSchema.safeParse({
           name: 'J',
-          phone: '0241234567',
-          amount: 30000,
+          phone: '+12125551234',
+          amount: 5000,
         });
         
         expect(result.success).toBe(false);
@@ -142,10 +162,19 @@ describe('Validators', () => {
     });
 
     describe('lookupTicketSchema', () => {
-      it('should validate lookup data', () => {
+      it('should validate lookup data with international phone', () => {
         const result = lookupTicketSchema.safeParse({
-          phone: '0241234567',
+          phone: '+12125551234',
           accessCode: 'ABC12',
+        });
+        
+        expect(result.success).toBe(true);
+      });
+
+      it('should validate lookup with UK phone', () => {
+        const result = lookupTicketSchema.safeParse({
+          phone: '+442071234567',
+          accessCode: 'XY12Z',
         });
         
         expect(result.success).toBe(true);
@@ -153,7 +182,7 @@ describe('Validators', () => {
 
       it('should reject missing accessCode', () => {
         const result = lookupTicketSchema.safeParse({
-          phone: '0241234567',
+          phone: '+12125551234',
         });
         
         expect(result.success).toBe(false);
