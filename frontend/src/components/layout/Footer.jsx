@@ -4,10 +4,12 @@
  */
 
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../ThemeProvider';
 
 export default function Footer() {
   const config = useTheme();
+  const { t } = useTranslation();
   const currentYear = new Date().getFullYear();
   
   return (
@@ -34,17 +36,17 @@ export default function Footer() {
           
           {/* Quick Links */}
           <div className="footer-section">
-            <h4>Quick Links</h4>
+            <h4>{t('footer.quickLinks')}</h4>
             <nav className="footer-nav">
-              <Link to="/">Home</Link>
-              <Link to="/events">Events</Link>
-              <Link to="/view">Find My Ticket</Link>
+              <Link to="/">{t('nav.home')}</Link>
+              <Link to="/events">{t('nav.events')}</Link>
+              <Link to="/view">{t('nav.myTickets')}</Link>
             </nav>
           </div>
           
           {/* Contact */}
           <div className="footer-section">
-            <h4>Contact</h4>
+            <h4>{t('footer.contact')}</h4>
             <div className="footer-contact">
               {config?.orgEmail && (
                 <a href={`mailto:${config.orgEmail}`} className="contact-link">
@@ -80,10 +82,10 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="footer-bottom">
           <p className="footer-copyright">
-            © {currentYear} {config?.orgName || 'VBS Tickets'}. All rights reserved.
+            © {currentYear} {config?.orgName || 'VBS Tickets'}. {t('footer.allRightsReserved')}
           </p>
           <p className="footer-powered">
-            {config?.footerText || 'Powered by VBS Ticketing'}
+            {config?.footerText || t('footer.poweredBy')}
           </p>
         </div>
       </div>

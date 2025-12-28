@@ -5,17 +5,20 @@
 
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../ThemeProvider';
+import LanguageSwitcher from '../LanguageSwitcher';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const config = useTheme();
+  const { t } = useTranslation();
   
   const navLinks = [
-    { href: '/', label: 'Home' },
-    { href: '/events', label: 'Events' },
-    { href: '/view', label: 'My Tickets' },
+    { href: '/', label: t('nav.home') },
+    { href: '/events', label: t('nav.events') },
+    { href: '/view', label: t('nav.myTickets') },
   ];
   
   const isActive = (path) => location.pathname === path;
@@ -51,8 +54,9 @@ export default function Header() {
         
         {/* Actions */}
         <div className="header-actions">
+          <LanguageSwitcher />
           <Link to="/events" className="btn btn-primary btn-sm">
-            Get Tickets
+            {t('events.getTickets')}
           </Link>
           
           {/* Mobile Menu Button */}
@@ -88,6 +92,9 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
+          <div className="mobile-lang-switcher">
+            <LanguageSwitcher variant="inline" />
+          </div>
         </nav>
       )}
       
@@ -195,6 +202,12 @@ export default function Header() {
         .mobile-nav-link.active {
           color: var(--color-text);
           background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .mobile-lang-switcher {
+          padding: 1rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.05);
+          margin-top: 0.5rem;
         }
         
         @media (max-width: 768px) {

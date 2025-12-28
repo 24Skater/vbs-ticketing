@@ -1,0 +1,203 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "clear": "Effacer",
+    "submit": "Soumettre",
+    "back": "Retour",
+    "next": "Suivant",
+    "continue": "Continuer",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "yes": "Oui",
+    "no": "Non",
+    "or": "ou",
+    "and": "et",
+    "all": "Tout",
+    "none": "Aucun",
+    "viewAll": "Voir Tout",
+    "learnMore": "En Savoir Plus",
+    "required": "Requis"
+  },
+  
+  "nav": {
+    "home": "Accueil",
+    "events": "Événements",
+    "myTickets": "Mes Billets",
+    "admin": "Admin",
+    "login": "Connexion",
+    "logout": "Déconnexion"
+  },
+  
+  "home": {
+    "heroTitle": "Bienvenue",
+    "heroSubtitle": "Obtenez vos billets pour les événements à venir",
+    "browseEvents": "Parcourir les Événements",
+    "findTicket": "Trouver Mon Billet",
+    "upcomingEvents": "Événements à Venir",
+    "noEvents": "Pas encore d'événements",
+    "checkBackSoon": "Revenez bientôt pour les prochains événements !",
+    "features": {
+      "easyBooking": "Réservation Facile",
+      "easyBookingDesc": "Sélectionnez votre événement, choisissez vos billets et payez en quelques minutes",
+      "digitalTickets": "Billets Numériques",
+      "digitalTicketsDesc": "Recevez vos billets instantanément par email avec codes QR",
+      "securePayments": "Paiements Sécurisés",
+      "securePaymentsDesc": "Plusieurs options de paiement avec une sécurité de niveau entreprise"
+    },
+    "cta": {
+      "title": "Prêt à Obtenir Vos Billets ?",
+      "subtitle": "Ne manquez pas des événements incroyables. Obtenez vos billets aujourd'hui !",
+      "button": "Obtenir des Billets Maintenant"
+    }
+  },
+  
+  "events": {
+    "title": "Événements à Venir",
+    "subtitle": "Trouvez et réservez des billets pour des événements incroyables",
+    "searchPlaceholder": "Rechercher des événements...",
+    "noEventsFound": "Aucun Événement Trouvé",
+    "tryAdjusting": "Essayez d'ajuster votre recherche",
+    "clearSearch": "Effacer la Recherche",
+    "found": "{{count}} événement trouvé",
+    "found_plural": "{{count}} événements trouvés",
+    "matching": "correspondant à \"{{query}}\"",
+    "getTickets": "Obtenir des Billets",
+    "soldOut": "Épuisé",
+    "available": "{{count}} disponibles",
+    "gridView": "Vue grille",
+    "listView": "Vue liste"
+  },
+  
+  "eventDetails": {
+    "upcoming": "À Venir",
+    "pastEvent": "Événement Passé",
+    "aboutEvent": "À Propos de Cet Événement",
+    "venue": "Lieu",
+    "schedule": "Programme de l'Événement",
+    "date": "Date",
+    "time": "Heure",
+    "endDate": "Date de Fin",
+    "selectTickets": "Sélectionner les Billets",
+    "ticketsNotAvailable": "Les billets ne sont pas encore disponibles pour cet événement.",
+    "proceedToCheckout": "Passer au Paiement",
+    "selectAtLeastOne": "Veuillez sélectionner au moins un billet",
+    "tickets": "Billets ({{count}})",
+    "total": "Total",
+    "eventNotFound": "Événement Non Trouvé",
+    "eventNotFoundDesc": "L'événement que vous recherchez n'existe pas ou a été supprimé."
+  },
+  
+  "checkout": {
+    "title": "Paiement",
+    "yourInfo": "Vos Informations",
+    "yourInfoDesc": "Entrez vos coordonnées pour recevoir vos billets",
+    "payment": "Paiement",
+    "paymentDesc": "Sélectionnez votre mode de paiement",
+    "fullName": "Nom Complet",
+    "email": "Adresse Email",
+    "emailHelp": "Les billets seront envoyés à cet email",
+    "phone": "Numéro de Téléphone",
+    "continueToPayment": "Continuer vers le Paiement",
+    "backToEvent": "Retour à l'Événement",
+    "completePurchase": "Finaliser l'Achat",
+    "processing": "Traitement...",
+    "orderSummary": "Récapitulatif de la Commande",
+    "secureCheckout": "Paiement sécurisé",
+    "paymentMethods": {
+      "payLater": "Payer Plus Tard / Espèces",
+      "payLaterDesc": "Payez sur place ou par virement bancaire",
+      "card": "Carte de Crédit/Débit",
+      "comingSoon": "Bientôt disponible"
+    },
+    "paymentNotRequired": "Le paiement en ligne n'est pas requis.",
+    "paymentNotRequiredDesc": "Vos billets seront réservés et vous pourrez payer sur place.",
+    "success": {
+      "title": "Achat Terminé !",
+      "description": "Vos billets ont été créés. Un email de confirmation a été envoyé à",
+      "ticketsPurchased": "{{count}} billet(s) acheté(s)",
+      "viewTickets": "Voir Mes Billets",
+      "browseMore": "Parcourir Plus d'Événements"
+    },
+    "errors": {
+      "enterName": "Veuillez entrer votre nom",
+      "enterEmail": "Veuillez entrer une adresse email valide",
+      "enterPhone": "Veuillez entrer votre numéro de téléphone",
+      "purchaseFailed": "Échec de l'achat. Veuillez réessayer."
+    }
+  },
+  
+  "ticketLookup": {
+    "title": "Trouver Mes Billets",
+    "subtitle": "Entrez vos coordonnées pour accéder à vos billets",
+    "phone": "Numéro de Téléphone",
+    "phoneHelp": "Le numéro de téléphone utilisé lors de l'achat",
+    "accessCode": "Code d'Accès",
+    "accessCodeHelp": "Code à 5 caractères de votre email de confirmation",
+    "accessCodePlaceholder": "ex. ABC12",
+    "findTicket": "Trouver Mon Billet",
+    "searching": "Recherche...",
+    "needHelp": "Besoin d'Aide ?",
+    "helpText": "Votre code d'accès vous a été envoyé par email après votre achat. Si vous ne le trouvez pas, vérifiez votre dossier spam ou contactez le support.",
+    "ticketNotFound": "Billet non trouvé. Veuillez vérifier vos informations et réessayer.",
+    "downloadPdf": "Télécharger le PDF",
+    "lookupAnother": "Rechercher un Autre Billet",
+    "showAtEntry": "Montrez ce code à l'entrée",
+    "checkedInAt": "Enregistré à {{time}}",
+    "status": {
+      "confirmed": "Confirmé",
+      "pending": "En Attente",
+      "checkedIn": "Enregistré",
+      "cancelled": "Annulé",
+      "refunded": "Remboursé"
+    }
+  },
+  
+  "ticket": {
+    "id": "ID du Billet",
+    "name": "Nom",
+    "type": "Type de Billet",
+    "eventDate": "Date de l'Événement",
+    "eventTime": "Heure de l'Événement",
+    "amount": "Montant",
+    "accessCode": "Code d'Accès",
+    "status": "Statut"
+  },
+  
+  "footer": {
+    "quickLinks": "Liens Rapides",
+    "contact": "Contact",
+    "allRightsReserved": "Tous droits réservés.",
+    "poweredBy": "Propulsé par VBS Ticketing"
+  },
+  
+  "errors": {
+    "general": "Une erreur s'est produite. Veuillez réessayer.",
+    "network": "Erreur réseau. Veuillez vérifier votre connexion.",
+    "notFound": "Non trouvé",
+    "unauthorized": "Veuillez vous connecter pour continuer",
+    "forbidden": "Vous n'avez pas la permission de faire cela",
+    "validation": "Veuillez vérifier votre saisie"
+  },
+  
+  "dates": {
+    "today": "Aujourd'hui",
+    "tomorrow": "Demain",
+    "yesterday": "Hier"
+  },
+  
+  "time": {
+    "at": "à",
+    "from": "de",
+    "to": "à"
+  }
+}
+

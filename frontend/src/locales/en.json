@@ -1,0 +1,203 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "clear": "Clear",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "continue": "Continue",
+    "close": "Close",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No",
+    "or": "or",
+    "and": "and",
+    "all": "All",
+    "none": "None",
+    "viewAll": "View All",
+    "learnMore": "Learn More",
+    "required": "Required"
+  },
+  
+  "nav": {
+    "home": "Home",
+    "events": "Events",
+    "myTickets": "My Tickets",
+    "admin": "Admin",
+    "login": "Login",
+    "logout": "Logout"
+  },
+  
+  "home": {
+    "heroTitle": "Welcome",
+    "heroSubtitle": "Get your tickets for upcoming events",
+    "browseEvents": "Browse Events",
+    "findTicket": "Find My Ticket",
+    "upcomingEvents": "Upcoming Events",
+    "noEvents": "No events yet",
+    "checkBackSoon": "Check back soon for upcoming events!",
+    "features": {
+      "easyBooking": "Easy Booking",
+      "easyBookingDesc": "Select your event, choose tickets, and checkout in minutes",
+      "digitalTickets": "Digital Tickets",
+      "digitalTicketsDesc": "Get your tickets instantly via email with QR codes",
+      "securePayments": "Secure Payments",
+      "securePaymentsDesc": "Multiple payment options with enterprise-grade security"
+    },
+    "cta": {
+      "title": "Ready to Get Your Tickets?",
+      "subtitle": "Don't miss out on amazing events. Get your tickets today!",
+      "button": "Get Tickets Now"
+    }
+  },
+  
+  "events": {
+    "title": "Upcoming Events",
+    "subtitle": "Find and book tickets for amazing events",
+    "searchPlaceholder": "Search events...",
+    "noEventsFound": "No Events Found",
+    "tryAdjusting": "Try adjusting your search terms",
+    "clearSearch": "Clear Search",
+    "found": "Found {{count}} event",
+    "found_plural": "Found {{count}} events",
+    "matching": "matching \"{{query}}\"",
+    "getTickets": "Get Tickets",
+    "soldOut": "Sold Out",
+    "available": "{{count}} available",
+    "gridView": "Grid view",
+    "listView": "List view"
+  },
+  
+  "eventDetails": {
+    "upcoming": "Upcoming",
+    "pastEvent": "Past Event",
+    "aboutEvent": "About This Event",
+    "venue": "Venue",
+    "schedule": "Event Schedule",
+    "date": "Date",
+    "time": "Time",
+    "endDate": "End Date",
+    "selectTickets": "Select Tickets",
+    "ticketsNotAvailable": "Tickets are not yet available for this event.",
+    "proceedToCheckout": "Proceed to Checkout",
+    "selectAtLeastOne": "Please select at least one ticket",
+    "tickets": "Tickets ({{count}})",
+    "total": "Total",
+    "eventNotFound": "Event Not Found",
+    "eventNotFoundDesc": "The event you're looking for doesn't exist or has been removed."
+  },
+  
+  "checkout": {
+    "title": "Checkout",
+    "yourInfo": "Your Information",
+    "yourInfoDesc": "Enter your details to receive your tickets",
+    "payment": "Payment",
+    "paymentDesc": "Select your payment method",
+    "fullName": "Full Name",
+    "email": "Email Address",
+    "emailHelp": "Tickets will be sent to this email",
+    "phone": "Phone Number",
+    "continueToPayment": "Continue to Payment",
+    "backToEvent": "Back to Event",
+    "completePurchase": "Complete Purchase",
+    "processing": "Processing...",
+    "orderSummary": "Order Summary",
+    "secureCheckout": "Secure checkout",
+    "paymentMethods": {
+      "payLater": "Pay Later / Cash",
+      "payLaterDesc": "Pay at the venue or via bank transfer",
+      "card": "Credit/Debit Card",
+      "comingSoon": "Coming soon"
+    },
+    "paymentNotRequired": "Payment is not required online.",
+    "paymentNotRequiredDesc": "Your tickets will be reserved and you can pay at the venue.",
+    "success": {
+      "title": "Purchase Complete!",
+      "description": "Your tickets have been created. A confirmation email has been sent to",
+      "ticketsPurchased": "{{count}} ticket(s) purchased",
+      "viewTickets": "View My Tickets",
+      "browseMore": "Browse More Events"
+    },
+    "errors": {
+      "enterName": "Please enter your name",
+      "enterEmail": "Please enter a valid email address",
+      "enterPhone": "Please enter your phone number",
+      "purchaseFailed": "Failed to complete purchase. Please try again."
+    }
+  },
+  
+  "ticketLookup": {
+    "title": "Find My Tickets",
+    "subtitle": "Enter your details to access your tickets",
+    "phone": "Phone Number",
+    "phoneHelp": "The phone number used during purchase",
+    "accessCode": "Access Code",
+    "accessCodeHelp": "5-character code from your confirmation email",
+    "accessCodePlaceholder": "e.g. ABC12",
+    "findTicket": "Find My Ticket",
+    "searching": "Searching...",
+    "needHelp": "Need Help?",
+    "helpText": "Your access code was sent to you via email after your purchase. If you can't find it, please check your spam folder or contact support.",
+    "ticketNotFound": "Ticket not found. Please check your details and try again.",
+    "downloadPdf": "Download PDF",
+    "lookupAnother": "Look Up Another Ticket",
+    "showAtEntry": "Show this code at entry",
+    "checkedInAt": "Checked in at {{time}}",
+    "status": {
+      "confirmed": "Confirmed",
+      "pending": "Pending",
+      "checkedIn": "Checked In",
+      "cancelled": "Cancelled",
+      "refunded": "Refunded"
+    }
+  },
+  
+  "ticket": {
+    "id": "Ticket ID",
+    "name": "Name",
+    "type": "Ticket Type",
+    "eventDate": "Event Date",
+    "eventTime": "Event Time",
+    "amount": "Amount",
+    "accessCode": "Access Code",
+    "status": "Status"
+  },
+  
+  "footer": {
+    "quickLinks": "Quick Links",
+    "contact": "Contact",
+    "allRightsReserved": "All rights reserved.",
+    "poweredBy": "Powered by VBS Ticketing"
+  },
+  
+  "errors": {
+    "general": "Something went wrong. Please try again.",
+    "network": "Network error. Please check your connection.",
+    "notFound": "Not found",
+    "unauthorized": "Please log in to continue",
+    "forbidden": "You don't have permission to do this",
+    "validation": "Please check your input"
+  },
+  
+  "dates": {
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "yesterday": "Yesterday"
+  },
+  
+  "time": {
+    "at": "at",
+    "from": "from",
+    "to": "to"
+  }
+}
+

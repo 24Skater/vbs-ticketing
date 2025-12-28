@@ -1,0 +1,203 @@
+{
+  "common": {
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Crear",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "clear": "Limpiar",
+    "submit": "Enviar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "continue": "Continuar",
+    "close": "Cerrar",
+    "confirm": "Confirmar",
+    "yes": "Sí",
+    "no": "No",
+    "or": "o",
+    "and": "y",
+    "all": "Todos",
+    "none": "Ninguno",
+    "viewAll": "Ver Todo",
+    "learnMore": "Más Información",
+    "required": "Requerido"
+  },
+  
+  "nav": {
+    "home": "Inicio",
+    "events": "Eventos",
+    "myTickets": "Mis Entradas",
+    "admin": "Admin",
+    "login": "Iniciar Sesión",
+    "logout": "Cerrar Sesión"
+  },
+  
+  "home": {
+    "heroTitle": "Bienvenido",
+    "heroSubtitle": "Obtén tus entradas para los próximos eventos",
+    "browseEvents": "Ver Eventos",
+    "findTicket": "Buscar Mi Entrada",
+    "upcomingEvents": "Próximos Eventos",
+    "noEvents": "No hay eventos aún",
+    "checkBackSoon": "¡Vuelve pronto para ver los próximos eventos!",
+    "features": {
+      "easyBooking": "Reserva Fácil",
+      "easyBookingDesc": "Selecciona tu evento, elige entradas y paga en minutos",
+      "digitalTickets": "Entradas Digitales",
+      "digitalTicketsDesc": "Recibe tus entradas al instante por email con códigos QR",
+      "securePayments": "Pagos Seguros",
+      "securePaymentsDesc": "Múltiples opciones de pago con seguridad empresarial"
+    },
+    "cta": {
+      "title": "¿Listo para Obtener tus Entradas?",
+      "subtitle": "No te pierdas eventos increíbles. ¡Obtén tus entradas hoy!",
+      "button": "Obtener Entradas Ahora"
+    }
+  },
+  
+  "events": {
+    "title": "Próximos Eventos",
+    "subtitle": "Encuentra y reserva entradas para eventos increíbles",
+    "searchPlaceholder": "Buscar eventos...",
+    "noEventsFound": "No Se Encontraron Eventos",
+    "tryAdjusting": "Intenta ajustar tu búsqueda",
+    "clearSearch": "Limpiar Búsqueda",
+    "found": "Se encontró {{count}} evento",
+    "found_plural": "Se encontraron {{count}} eventos",
+    "matching": "que coinciden con \"{{query}}\"",
+    "getTickets": "Obtener Entradas",
+    "soldOut": "Agotado",
+    "available": "{{count}} disponibles",
+    "gridView": "Vista de cuadrícula",
+    "listView": "Vista de lista"
+  },
+  
+  "eventDetails": {
+    "upcoming": "Próximo",
+    "pastEvent": "Evento Pasado",
+    "aboutEvent": "Sobre Este Evento",
+    "venue": "Lugar",
+    "schedule": "Horario del Evento",
+    "date": "Fecha",
+    "time": "Hora",
+    "endDate": "Fecha de Fin",
+    "selectTickets": "Seleccionar Entradas",
+    "ticketsNotAvailable": "Las entradas aún no están disponibles para este evento.",
+    "proceedToCheckout": "Proceder al Pago",
+    "selectAtLeastOne": "Por favor selecciona al menos una entrada",
+    "tickets": "Entradas ({{count}})",
+    "total": "Total",
+    "eventNotFound": "Evento No Encontrado",
+    "eventNotFoundDesc": "El evento que buscas no existe o ha sido eliminado."
+  },
+  
+  "checkout": {
+    "title": "Pago",
+    "yourInfo": "Tu Información",
+    "yourInfoDesc": "Ingresa tus datos para recibir tus entradas",
+    "payment": "Pago",
+    "paymentDesc": "Selecciona tu método de pago",
+    "fullName": "Nombre Completo",
+    "email": "Correo Electrónico",
+    "emailHelp": "Las entradas se enviarán a este correo",
+    "phone": "Número de Teléfono",
+    "continueToPayment": "Continuar al Pago",
+    "backToEvent": "Volver al Evento",
+    "completePurchase": "Completar Compra",
+    "processing": "Procesando...",
+    "orderSummary": "Resumen del Pedido",
+    "secureCheckout": "Pago seguro",
+    "paymentMethods": {
+      "payLater": "Pagar Después / Efectivo",
+      "payLaterDesc": "Paga en el lugar o por transferencia bancaria",
+      "card": "Tarjeta de Crédito/Débito",
+      "comingSoon": "Próximamente"
+    },
+    "paymentNotRequired": "No se requiere pago en línea.",
+    "paymentNotRequiredDesc": "Tus entradas serán reservadas y podrás pagar en el lugar.",
+    "success": {
+      "title": "¡Compra Completada!",
+      "description": "Tus entradas han sido creadas. Se ha enviado un correo de confirmación a",
+      "ticketsPurchased": "{{count}} entrada(s) comprada(s)",
+      "viewTickets": "Ver Mis Entradas",
+      "browseMore": "Ver Más Eventos"
+    },
+    "errors": {
+      "enterName": "Por favor ingresa tu nombre",
+      "enterEmail": "Por favor ingresa un correo electrónico válido",
+      "enterPhone": "Por favor ingresa tu número de teléfono",
+      "purchaseFailed": "No se pudo completar la compra. Por favor intenta de nuevo."
+    }
+  },
+  
+  "ticketLookup": {
+    "title": "Buscar Mis Entradas",
+    "subtitle": "Ingresa tus datos para acceder a tus entradas",
+    "phone": "Número de Teléfono",
+    "phoneHelp": "El número de teléfono usado durante la compra",
+    "accessCode": "Código de Acceso",
+    "accessCodeHelp": "Código de 5 caracteres de tu correo de confirmación",
+    "accessCodePlaceholder": "ej. ABC12",
+    "findTicket": "Buscar Mi Entrada",
+    "searching": "Buscando...",
+    "needHelp": "¿Necesitas Ayuda?",
+    "helpText": "Tu código de acceso fue enviado por correo después de tu compra. Si no lo encuentras, revisa tu carpeta de spam o contacta a soporte.",
+    "ticketNotFound": "Entrada no encontrada. Por favor verifica tus datos e intenta de nuevo.",
+    "downloadPdf": "Descargar PDF",
+    "lookupAnother": "Buscar Otra Entrada",
+    "showAtEntry": "Muestra este código en la entrada",
+    "checkedInAt": "Registrado a las {{time}}",
+    "status": {
+      "confirmed": "Confirmado",
+      "pending": "Pendiente",
+      "checkedIn": "Registrado",
+      "cancelled": "Cancelado",
+      "refunded": "Reembolsado"
+    }
+  },
+  
+  "ticket": {
+    "id": "ID de Entrada",
+    "name": "Nombre",
+    "type": "Tipo de Entrada",
+    "eventDate": "Fecha del Evento",
+    "eventTime": "Hora del Evento",
+    "amount": "Monto",
+    "accessCode": "Código de Acceso",
+    "status": "Estado"
+  },
+  
+  "footer": {
+    "quickLinks": "Enlaces Rápidos",
+    "contact": "Contacto",
+    "allRightsReserved": "Todos los derechos reservados.",
+    "poweredBy": "Desarrollado por VBS Ticketing"
+  },
+  
+  "errors": {
+    "general": "Algo salió mal. Por favor intenta de nuevo.",
+    "network": "Error de red. Por favor verifica tu conexión.",
+    "notFound": "No encontrado",
+    "unauthorized": "Por favor inicia sesión para continuar",
+    "forbidden": "No tienes permiso para hacer esto",
+    "validation": "Por favor verifica tu entrada"
+  },
+  
+  "dates": {
+    "today": "Hoy",
+    "tomorrow": "Mañana",
+    "yesterday": "Ayer"
+  },
+  
+  "time": {
+    "at": "a las",
+    "from": "desde",
+    "to": "hasta"
+  }
+}
+
