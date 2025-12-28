@@ -83,6 +83,58 @@ export const paymentsApi = {
 };
 
 /**
+ * Events API
+ */
+export const eventsApi = {
+  list: (params = {}) => api.get('/events', { params }),
+  getById: (id) => api.get(`/events/${id}`),
+  create: (data) => api.post('/events', data),
+  update: (id, data) => api.patch(`/events/${id}`, data),
+  delete: (id) => api.delete(`/events/${id}`),
+  getTicketTypes: (eventId) => api.get(`/events/${eventId}/ticket-types`),
+  createTicketType: (eventId, data) => api.post(`/events/${eventId}/ticket-types`, data),
+  updateTicketType: (eventId, typeId, data) => api.patch(`/events/${eventId}/ticket-types/${typeId}`, data),
+  deleteTicketType: (eventId, typeId) => api.delete(`/events/${eventId}/ticket-types/${typeId}`),
+};
+
+/**
+ * Config API (public)
+ */
+export const configApi = {
+  getPublicConfig: () => api.get('/config'),
+  getThemeCss: () => api.get('/config/theme.css'),
+  getPaymentProviders: () => api.get('/config/payment-providers'),
+};
+
+/**
+ * Admin API
+ */
+export const adminApi = {
+  // Config
+  getConfig: () => api.get('/config/admin'),
+  updateConfig: (data) => api.patch('/config/admin', data),
+  clearCache: () => api.post('/config/admin/clear-cache'),
+  
+  // Payment providers
+  getPaymentProviders: () => api.get('/config/admin/payment-providers'),
+  getPaymentProvider: (provider) => api.get(`/config/admin/payment-providers/${provider}`),
+  upsertPaymentProvider: (provider, data) => api.put(`/config/admin/payment-providers/${provider}`, data),
+  deletePaymentProvider: (provider) => api.delete(`/config/admin/payment-providers/${provider}`),
+  togglePaymentProvider: (provider, enabled) => api.post(`/config/admin/payment-providers/${provider}/toggle`, { enabled }),
+  setDefaultPaymentProvider: (provider) => api.post(`/config/admin/payment-providers/${provider}/set-default`),
+  
+  // File uploads
+  uploadFile: (category, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('category', category);
+    return api.post('/uploads', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+};
+
+/**
  * Helper to set auth tokens
  */
 export const setAuthTokens = (accessToken, refreshToken) => {
