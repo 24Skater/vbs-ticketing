@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { adminApi } from '../../lib/api';
+import api from '../../lib/api';
 import { Button, Input, Card, Alert, Spinner } from '../../components/ui';
 
 // Theme presets matching backend
@@ -79,8 +79,8 @@ export default function Branding() {
   const loadBranding = async () => {
     try {
       setLoading(true);
-      const response = await adminApi.get('/config/admin');
-      const config = response.data.data;
+      const response = await api.get('/config/admin');
+      const config = response.data;
       
       setBranding({
         primaryColor: config.primaryColor || '#3b82f6',
@@ -112,7 +112,7 @@ export default function Branding() {
       setSaving(true);
       setError(null);
       
-      await adminApi.patch('/config/admin', branding);
+      await api.patch('/config/admin', branding);
       
       setSuccess('Branding settings saved successfully!');
       setTimeout(() => setSuccess(null), 3000);
@@ -129,7 +129,7 @@ export default function Branding() {
       setError(null);
       
       // Apply preset via API
-      const response = await adminApi.post('/config/admin/theme-preset', {
+      const response = await api.post('/config/admin/theme-preset', {
         preset: presetKey,
       });
       
@@ -224,7 +224,7 @@ export default function Branding() {
         ? '/uploads/favicon'
         : '/uploads/hero';
       
-      const response = await adminApi.post(endpoint, formData, {
+      const response = await api.post(endpoint, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       
