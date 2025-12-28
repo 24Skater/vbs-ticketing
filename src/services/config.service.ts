@@ -405,6 +405,150 @@ export async function initializeDefaultProviders(): Promise<void> {
 }
 
 // ============================================================================
+// BRANDING HELPERS
+// ============================================================================
+
+/**
+ * Branding-specific fields for easier updates
+ */
+export interface BrandingConfig {
+  // Colors
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  surfaceColor: string;
+  textColor: string;
+  textMutedColor: string;
+  
+  // Typography
+  headingFont: string;
+  bodyFont: string;
+  borderRadius: string;
+  
+  // Assets
+  logoUrl: string | null;
+  logoDarkUrl: string | null;
+  faviconUrl: string | null;
+  heroImageUrl: string | null;
+  
+  // Custom CSS
+  customCss: string | null;
+}
+
+/**
+ * Get branding configuration
+ */
+export async function getBranding(): Promise<BrandingConfig> {
+  const config = await getSiteConfig();
+  
+  return {
+    primaryColor: config.primaryColor,
+    secondaryColor: config.secondaryColor,
+    accentColor: config.accentColor,
+    backgroundColor: config.backgroundColor,
+    surfaceColor: config.surfaceColor,
+    textColor: config.textColor,
+    textMutedColor: config.textMutedColor,
+    headingFont: config.headingFont,
+    bodyFont: config.bodyFont,
+    borderRadius: config.borderRadius,
+    logoUrl: config.logoUrl,
+    logoDarkUrl: config.logoDarkUrl,
+    faviconUrl: config.faviconUrl,
+    heroImageUrl: config.heroImageUrl,
+    customCss: config.customCss,
+  };
+}
+
+/**
+ * Update branding configuration
+ */
+export async function updateBranding(
+  data: Partial<BrandingConfig>
+): Promise<BrandingConfig> {
+  await updateSiteConfig(data);
+  return getBranding();
+}
+
+/**
+ * Preset themes
+ */
+export const THEME_PRESETS = {
+  dark: {
+    primaryColor: '#3b82f6',
+    secondaryColor: '#1e293b',
+    accentColor: '#10b981',
+    backgroundColor: '#0f172a',
+    surfaceColor: '#1e293b',
+    textColor: '#f8fafc',
+    textMutedColor: '#94a3b8',
+  },
+  light: {
+    primaryColor: '#2563eb',
+    secondaryColor: '#f1f5f9',
+    accentColor: '#059669',
+    backgroundColor: '#ffffff',
+    surfaceColor: '#f8fafc',
+    textColor: '#0f172a',
+    textMutedColor: '#64748b',
+  },
+  midnight: {
+    primaryColor: '#8b5cf6',
+    secondaryColor: '#1e1b4b',
+    accentColor: '#f472b6',
+    backgroundColor: '#0c0a1d',
+    surfaceColor: '#1e1b4b',
+    textColor: '#e2e8f0',
+    textMutedColor: '#a78bfa',
+  },
+  forest: {
+    primaryColor: '#22c55e',
+    secondaryColor: '#14532d',
+    accentColor: '#84cc16',
+    backgroundColor: '#052e16',
+    surfaceColor: '#14532d',
+    textColor: '#f0fdf4',
+    textMutedColor: '#86efac',
+  },
+  ocean: {
+    primaryColor: '#06b6d4',
+    secondaryColor: '#164e63',
+    accentColor: '#0ea5e9',
+    backgroundColor: '#0c4a6e',
+    surfaceColor: '#155e75',
+    textColor: '#ecfeff',
+    textMutedColor: '#67e8f9',
+  },
+  sunset: {
+    primaryColor: '#f97316',
+    secondaryColor: '#7c2d12',
+    accentColor: '#fbbf24',
+    backgroundColor: '#431407',
+    surfaceColor: '#7c2d12',
+    textColor: '#fff7ed',
+    textMutedColor: '#fdba74',
+  },
+} as const;
+
+/**
+ * Apply a theme preset
+ */
+export async function applyThemePreset(
+  presetName: keyof typeof THEME_PRESETS
+): Promise<BrandingConfig> {
+  const preset = THEME_PRESETS[presetName];
+  if (!preset) {
+    throw new AppError(400, 'Invalid theme preset', 'INVALID_PRESET');
+  }
+  
+  await updateSiteConfig(preset);
+  logger.info('Theme preset applied', { preset: presetName });
+  
+  return getBranding();
+}
+
+// ============================================================================
 // THEME HELPERS
 // ============================================================================
 

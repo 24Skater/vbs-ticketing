@@ -144,5 +144,42 @@ router.post(
   wrap(configController.setDefaultPaymentProvider)
 );
 
+// ============================================================================
+// BRANDING ROUTES
+// ============================================================================
+
+/**
+ * GET /api/config/admin/branding
+ * Get branding configuration
+ */
+router.get(
+  '/admin/branding',
+  requireAuth,
+  requireRole('ADMIN', 'SUPER_ADMIN'),
+  wrap(configController.getBranding)
+);
+
+/**
+ * PATCH /api/config/admin/branding
+ * Update branding configuration
+ */
+router.patch(
+  '/admin/branding',
+  requireAuth,
+  requireRole('ADMIN', 'SUPER_ADMIN'),
+  wrap(configController.updateBranding)
+);
+
+/**
+ * POST /api/config/admin/theme-preset
+ * Apply a theme preset
+ */
+router.post(
+  '/admin/theme-preset',
+  requireAuth,
+  requireRole('ADMIN', 'SUPER_ADMIN'),
+  wrap(configController.applyThemePreset)
+);
+
 export default router;
 

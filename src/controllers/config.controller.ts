@@ -246,3 +246,69 @@ export async function setDefaultPaymentProvider(
   });
 }
 
+// ============================================================================
+// BRANDING ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/admin/branding
+ * Get branding configuration
+ */
+export async function getBranding(
+  _req: Request,
+  res: Response
+): Promise<void> {
+  const branding = await configService.getBranding();
+  
+  res.json({
+    success: true,
+    data: branding
+  });
+}
+
+/**
+ * PATCH /api/admin/branding
+ * Update branding configuration
+ */
+export async function updateBranding(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const branding = await configService.updateBranding(req.body);
+  
+  res.json({
+    success: true,
+    message: 'Branding updated successfully',
+    data: branding
+  });
+}
+
+/**
+ * POST /api/admin/theme-preset
+ * Apply a theme preset
+ */
+export async function applyThemePreset(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const { preset } = req.body;
+  
+  if (!preset || !configService.THEME_PRESETS[preset as keyof typeof configService.THEME_PRESETS]) {
+    res.status(400).json({
+      success: false,
+      error: 'Invalid theme preset'
+    });
+    return;
+  }
+  
+  const branding = await configService.applyThemePreset(
+    preset as keyof typeof configService.THEME_PRESETS
+  );
+  
+  res.json({
+    success: true,
+    message: `Applied ${preset} theme preset`,
+    data: branding
+  });
+}
+
